@@ -1,0 +1,323 @@
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ChevronLeft, ChevronRight, Download, Printer } from 'lucide-react'
+import { format, addWeeks, subWeeks, addDays } from 'date-fns'
+import useAppStore from '../store/useAppStore'
+import {
+  getWeek,
+  getActiveSlotsWithLocations,
+  listAssignmentsByWeek,
+} from '../db/queries/assignments'
+
+const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const REPORT_DAYS = [1, 2, 3, 4, 5, 6, 0]
+const DAY_OFFSET  = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }
+
+function getThisMonday() {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function getPeriodFromTime(time) {
+  if (time < '12:00') return 'MANHÃ'
+  if (time < '18:00') return 'TARDE'
+  return 'NOITE'
+}
+
+function buildReportGridByCart(slots, rawAssignments, brothers) {
+  const brotherMap = {}
+  for (const b of brothers) brotherMap[b.id] = b.name
+
+  const assignMap = {}
+  for (const a of rawAssignments) {
+    assignMap[`${a.slot_id}-${a.position}`] = brotherMap[a.brother_id] ?? ''
+  }
+
+  const cartMap = {}
+  for (const slot of slots) {
+    const cartId = slot.cart_id ?? '__none__'
+    const cartName = slot.cart_name || 'Sem Carrinho'
+    const period = getPeriodFromTime(slot.start_time)
+
+    if (!cartMap[cartId]) {
+      cartMap[cartId] = { cart_id: cartId, cart_name: cartName, periods: {} }
+    }
+    if (!cartMap[cartId].periods[period]) {
+      cartMap[cartId].periods[period] = { period, days: {} }
+    }
+
+    const names = []
+    for (let pos = 1; pos <= slot.capacity; pos++) {
+      names.push(assignMap[`${slot.id}-${pos}`] ?? '')
+    }
+    while (names.length > 1 && names[names.length - 1] === '') names.pop()
+
+    const entry = {
+      names,
+      location: slot.location_name,
+      time: `${slot.start_time}–${slot.end_time}`,
+    }
+
+    // Múltiplos slots no mesmo período/dia são acumulados em array
+    if (!cartMap[cartId].periods[period].days[slot.day_of_week]) {
+      cartMap[cartId].periods[period].days[slot.day_of_week] = []
+    }
+    cartMap[cartId].periods[period].days[slot.day_of_week].push(entry)
+  }
+
+  return Object.values(cartMap).map((cart) => ({
+    ...cart,
+    periods: ['MANHÃ', 'TARDE', 'NOITE'].map((p) => cart.periods[p]).filter(Boolean),
+  }))
+}
+
+export default function Report() {
+  const { db, brothers } = useAppStore()
+  const reportRef = useRef(null)
+
+  const [monday, setMonday] = useState(getThisMonday)
+  const [week, setWeek] = useState(null)
+  const [grid, setGrid] = useState([])
+  const [exporting, setExporting] = useState(false)
+  const [congregationName] = useState(
+    () => localStorage.getItem('congregationName') || 'Congregação'
+  )
+
+  const weekStart = format(monday, 'yyyy-MM-dd')
+  const weekEnd   = format(addDays(monday, 6), 'dd/MM/yyyy')
+  const weekLabel = `${format(monday, 'dd/MM')} a ${weekEnd}`
+
+  const loadData = useCallback(
+    (w) => {
+      const slots = getActiveSlotsWithLocations(db)
+      const rawAssignments = listAssignmentsByWeek(db, w.id)
+      setGrid(buildReportGridByCart(slots, rawAssignments, brothers))
+    },
+    [db, brothers]
+  )
+
+  useEffect(() => {
+    if (!db) return
+    const existing = getWeek(db, weekStart)
+    setWeek(existing)
+    if (existing) loadData(existing)
+    else setGrid([])
+  }, [db, weekStart, loadData])
+
+  async function handleExportPDF() {
+    if (!reportRef.current) return
+    setExporting(true)
+    try {
+      const html2pdf = (await import('html2pdf.js')).default
+      await html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: `testemunho_${weekStart}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        })
+        .from(reportRef.current)
+        .save()
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  function handlePrint() {
+    window.print()
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header da tela */}
+      <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 bg-white shrink-0 print:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMonday((m) => subWeeks(m, 1))}
+            className="p-2 rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <div className="text-center min-w-[210px]">
+            <p className="font-semibold text-slate-800 text-sm">Semana de {weekLabel}</p>
+          </div>
+          <button
+            onClick={() => setMonday((m) => addWeeks(m, 1))}
+            className="p-2 rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
+          >
+            <Printer size={14} />
+            Imprimir
+          </button>
+          <button
+            onClick={handleExportPDF}
+            disabled={!week || exporting}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={14} />
+            {exporting ? 'Gerando PDF...' : 'Exportar PDF'}
+          </button>
+        </div>
+      </div>
+
+      {/* Área de conteúdo */}
+      <div className="flex-1 overflow-auto bg-gray-100 p-6 print:p-0 print:bg-white">
+        {!week ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-sm">
+              <p className="font-semibold text-slate-800 mb-1">Semana sem programação</p>
+              <p className="text-sm text-slate-500">
+                A semana de {weekLabel} ainda não possui programação criada.
+                Acesse a tela de Programação para criar.
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Folha do relatório — este div é capturado pelo html2pdf */
+          <div
+            ref={reportRef}
+            data-print-target
+            className="bg-white shadow-md mx-auto print:shadow-none"
+            style={{ width: '277mm', minHeight: '190mm', padding: '10mm' }}
+          >
+            {/* Cabeçalho do relatório */}
+            <div className="text-center mb-4">
+              <h1
+                className="font-bold uppercase tracking-wide text-slate-800"
+                style={{ fontSize: '13pt' }}
+              >
+                Arranjo de Testemunho Público com o Carrinho
+              </h1>
+              <p className="text-slate-600 mt-0.5" style={{ fontSize: '10pt' }}>
+                {congregationName} &nbsp;|&nbsp; Semana:{' '}
+                {format(monday, 'dd/MM/yyyy')} a {weekEnd}
+              </p>
+            </div>
+
+            {/* Tabela do relatório agrupada por carrinho + período */}
+            {grid.length === 0 ? (
+              <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                Nenhum turno configurado ou designações vazias.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {grid.map((cart) => (
+                  <div key={cart.cart_id}>
+                    <h2
+                      className="text-center font-bold uppercase tracking-wide text-slate-800 mb-1"
+                      style={{ fontSize: '11pt' }}
+                    >
+                      Carrinho {cart.cart_name}
+                    </h2>
+                    <table
+                      className="w-full border-collapse"
+                      style={{ fontSize: '9pt', tableLayout: 'fixed' }}
+                    >
+                      <colgroup>
+                        <col style={{ width: '14%' }} />
+                        {REPORT_DAYS.map((d) => (
+                          <col key={d} style={{ width: `${86 / REPORT_DAYS.length}%` }} />
+                        ))}
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th
+                            className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold"
+                            style={{ fontSize: '8.5pt' }}
+                          >
+                            Período
+                          </th>
+                          {REPORT_DAYS.map((d) => {
+                            const date = addDays(monday, DAY_OFFSET[d])
+                            return (
+                              <th
+                                key={d}
+                                className="border border-slate-400 bg-slate-700 text-white px-1 py-1 text-center font-semibold"
+                                style={{ fontSize: '8.5pt' }}
+                              >
+                                {DAY_LABELS[d]}
+                                <br />
+                                <span style={{ fontSize: '7.5pt', fontWeight: 400 }}>
+                                  {format(date, 'dd/MM')}
+                                </span>
+                              </th>
+                            )
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cart.periods.map((periodObj) => (
+                          <tr key={periodObj.period}>
+                            <td
+                              className="border border-slate-300 px-2 py-1 font-semibold bg-slate-50 text-slate-700"
+                              style={{ fontSize: '8pt' }}
+                            >
+                              {periodObj.period}
+                            </td>
+                            {REPORT_DAYS.map((d) => {
+                              const dayEntries = periodObj.days[d]
+                              return (
+                                <td
+                                  key={d}
+                                  className="border border-slate-300 px-1 py-1 align-top text-center"
+                                  style={{ verticalAlign: 'top' }}
+                                >
+                                  {dayEntries && dayEntries.length > 0 ? (
+                                    <div className="flex flex-col gap-1">
+                                      {dayEntries.map((data, ei) => (
+                                        <div key={ei} className={ei > 0 ? 'border-t border-slate-200 pt-1' : ''}>
+                                          {data.names.map((name, i) => (
+                                            <div
+                                              key={i}
+                                              className="text-slate-800 leading-snug"
+                                              style={{ fontSize: '8.5pt', minHeight: '13pt' }}
+                                            >
+                                              {name || ''}
+                                            </div>
+                                          ))}
+                                          <div className="text-slate-500" style={{ fontSize: '7pt' }}>
+                                            {data.location}
+                                          </div>
+                                          <div className="text-slate-400 font-mono" style={{ fontSize: '7pt' }}>
+                                            {data.time}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div style={{ minHeight: '13pt' }} />
+                                  )}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Rodapé */}
+            <div className="mt-4 text-right text-slate-400" style={{ fontSize: '7pt' }}>
+              Gerado em {format(new Date(), 'dd/MM/yyyy HH:mm')}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

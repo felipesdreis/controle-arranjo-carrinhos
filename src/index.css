@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  /* Torna visível apenas o div do relatório e seus filhos */
+  [data-print-target],
+  [data-print-target] * {
+    visibility: visible;
+  }
+  [data-print-target] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+}
