@@ -1,9 +1,12 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import useAppStore from './store/useAppStore'
+import useAuthStore from './store/useAuthStore'
 import { validateSupabaseConfig } from './api/client'
 import Sidebar from './components/Layout/Sidebar'
 import Header from './components/Layout/Header'
+import ProtectedRoute from './components/ProtectedRoute'
+import AuthPage from './pages/Auth/AuthPage'
 import Dashboard from './pages/Dashboard'
 import Brothers from './pages/Brothers'
 import Carts from './pages/Carts'
@@ -59,6 +62,7 @@ function ErrorScreen({ message }) {
 
 export default function App() {
   const { loading, error, initDB } = useAppStore()
+  const { user, authReady, initAuth } = useAuthStore()
 
   useEffect(() => {
     initDB()
@@ -69,12 +73,43 @@ export default function App() {
     validateSupabaseConfig()
   }, [])
 
+  // Inicializa autenticação e registra listener; cleanup cancela a subscription
+  useEffect(() => {
+    let unsubscribe = () => {}
+    initAuth().then((fn) => { unsubscribe = fn })
+    return () => unsubscribe()
+  }, [])
+
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
 
   return (
     <BrowserRouter>
-      <AppLayout />
+      <Routes>
+        {/* Rota pública: aguarda authReady para não exibir o login a um
+            usuário já autenticado que recarrega a página (US-08) */}
+        <Route
+          path="/auth"
+          element={
+            !authReady ? (
+              <LoadingScreen />
+            ) : user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <AuthPage />
+            )
+          }
+        />
+        {/* Todas as rotas protegidas ficam dentro do ProtectedRoute */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   )
 }
