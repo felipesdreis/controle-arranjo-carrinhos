@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import useAppStore from './store/useAppStore'
+import { validateSupabaseConfig } from './api/client'
 import Sidebar from './components/Layout/Sidebar'
 import Header from './components/Layout/Header'
 import Dashboard from './pages/Dashboard'
@@ -61,6 +62,11 @@ export default function App() {
 
   useEffect(() => {
     initDB()
+  }, [])
+
+  // Validação Supabase não-bloqueante — não interfere no fluxo do initDB/OPFS
+  useEffect(() => {
+    validateSupabaseConfig()
   }, [])
 
   if (loading) return <LoadingScreen />
