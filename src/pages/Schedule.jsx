@@ -126,6 +126,7 @@ export default function Schedule() {
   const [assignments, setAssignments] = useState({})
   const [showPrompt, setShowPrompt] = useState(false)
   const [prevWeek, setPrevWeek] = useState(null)
+  const [weeksLoaded, setWeeksLoaded] = useState(false)
 
   // Modal de gerenciamento de turnos
   const [showSlotManager, setShowSlotManager] = useState(false)
@@ -161,6 +162,7 @@ export default function Schedule() {
     async function init() {
       const weeks = await getScheduleWeeks()
       setAllWeeks(weeks)
+      setWeeksLoaded(true)
     }
     init()
     reloadSlots()
@@ -168,7 +170,7 @@ export default function Schedule() {
 
   // Reage à troca de semana ou atualização de allWeeks
   useEffect(() => {
-    if (allWeeks.length === 0) return
+    if (!weeksLoaded) return
     const existing = allWeeks.find(w => w.week_start === weekStart) ?? null
     if (existing) {
       setWeek(existing)
@@ -185,7 +187,7 @@ export default function Schedule() {
       setPrevWeek(prev)
       setShowPrompt(true)
     }
-  }, [allWeeks, weekStart, loadData])
+  }, [allWeeks, weekStart, loadData, weeksLoaded])
 
   async function handleCreateWeek(copyFrom = null) {
     const newWeek = await createScheduleWeek(weekStart)
