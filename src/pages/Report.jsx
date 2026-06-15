@@ -141,7 +141,7 @@ export default function Report() {
   return (
     <div className="flex flex-col h-full">
       {/* Header da tela */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 bg-white shrink-0 print:hidden">
+      <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-gray-200 bg-white shrink-0 print:hidden">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMonday((m) => subWeeks(m, 1))}
@@ -197,6 +197,7 @@ export default function Report() {
           </div>
         ) : (
           /* Folha do relatório — este div é capturado pelo html2pdf */
+          <div className="overflow-x-auto">
           <div
             ref={reportRef}
             data-print-target
@@ -326,6 +327,7 @@ export default function Report() {
             <div className="mt-4 text-right text-slate-400" style={{ fontSize: '7pt' }}>
               Gerado em {format(new Date(), 'dd/MM/yyyy HH:mm')}
             </div>
+          </div>
           </div>
         )}
       </div>

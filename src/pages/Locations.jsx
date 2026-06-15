@@ -2,6 +2,8 @@ import { useState, useEffect, Fragment } from 'react'
 import { ChevronDown, ChevronUp, Pencil, Trash2, Plus } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import Modal from '../components/ui/Modal'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -19,11 +21,11 @@ function hasOverlap(slots, dayOfWeek, startTime, endTime, excludeId = null) {
 
 function Badge({ active }) {
   return active ? (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-green-soft text-accent-green">
       Ativo
     </span>
   ) : (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-subtle text-ink/50">
       Inativo
     </span>
   )
@@ -45,48 +47,37 @@ function LocationForm({ initial, onSave, onClose }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Nome *</label>
+        <label className="block text-sm font-medium text-ink mb-1">Nome *</label>
         <input
           name="name"
           value={form.name}
           onChange={handleChange}
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Endereço</label>
+        <label className="block text-sm font-medium text-ink mb-1">Endereço</label>
         <input
           name="address"
           value={form.address}
           onChange={handleChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Anotações</label>
+        <label className="block text-sm font-medium text-ink mb-1">Anotações</label>
         <textarea
           name="notes"
           value={form.notes}
           onChange={handleChange}
           rows={3}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 resize-none"
+          className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand resize-none"
         />
       </div>
       <div className="flex justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 text-sm rounded-lg bg-slate-700 text-white hover:bg-slate-800 transition-colors"
-        >
-          Salvar
-        </button>
+        <Button type="button" variant="subtle" onClick={onClose}>Cancelar</Button>
+        <Button type="submit" variant="primary">Salvar</Button>
       </div>
     </form>
   )
@@ -115,12 +106,12 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Dia da semana</label>
+          <label className="block text-sm font-medium text-ink mb-1">Dia da semana</label>
           <select
             name="day_of_week"
             value={form.day_of_week}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           >
             {DAYS.map((day, i) => (
               <option key={i} value={i}>{day}</option>
@@ -128,7 +119,7 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Capacidade</label>
+          <label className="block text-sm font-medium text-ink mb-1">Capacidade</label>
           <input
             name="capacity"
             type="number"
@@ -136,41 +127,41 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
             max={4}
             value={form.capacity}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Horário início</label>
+          <label className="block text-sm font-medium text-ink mb-1">Horário início</label>
           <input
             name="start_time"
             type="time"
             value={form.start_time}
             onChange={handleChange}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Horário fim</label>
+          <label className="block text-sm font-medium text-ink mb-1">Horário fim</label>
           <input
             name="end_time"
             type="time"
             value={form.end_time}
             onChange={handleChange}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
           />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Carrinho</label>
+        <label className="block text-sm font-medium text-ink mb-1">Carrinho</label>
         <select
           name="cart_id"
           value={form.cart_id}
           onChange={handleChange}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="w-full border border-surface-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
         >
           <option value="">-- Nenhum --</option>
           {activeCarts.map((c) => (
@@ -184,19 +175,8 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
         </p>
       )}
       <div className="flex justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 text-sm rounded-lg bg-slate-700 text-white hover:bg-slate-800 transition-colors"
-        >
-          Salvar
-        </button>
+        <Button type="button" variant="subtle" onClick={onClose}>Cancelar</Button>
+        <Button type="submit" variant="primary">Salvar</Button>
       </div>
     </form>
   )
@@ -247,24 +227,25 @@ function SlotsPanel({ locationId, activeCarts }) {
     : EMPTY_SLOT_FORM
 
   return (
-    <div className="bg-slate-50 border-t border-gray-200 px-6 py-4">
+    <div className="bg-surface-subtle border-t border-surface-border px-6 py-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-slate-600">Turnos</span>
-        <button
+        <span className="text-sm font-medium text-ink/70">Turnos</span>
+        <Button
+          variant="primary"
+          className="text-xs px-3 py-1.5"
           onClick={() => setSlotModal('new')}
-          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 text-white hover:bg-slate-800 transition-colors"
         >
           <Plus size={13} />
           Novo Turno
-        </button>
+        </Button>
       </div>
 
       {slots.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">Nenhum turno cadastrado.</p>
+        <p className="text-sm text-ink/40 italic">Nenhum turno cadastrado.</p>
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs font-medium text-slate-500 border-b border-gray-200">
+            <tr className="text-left text-xs font-medium text-ink/60 border-b border-surface-border">
               <th className="pb-2 pr-4">Dia</th>
               <th className="pb-2 pr-4">Horário</th>
               <th className="pb-2 pr-4">Carrinho</th>
@@ -274,20 +255,20 @@ function SlotsPanel({ locationId, activeCarts }) {
           </thead>
           <tbody>
             {slots.map((slot) => (
-              <tr key={slot.id} className="border-b border-gray-100 last:border-0">
-                <td className="py-2 pr-4 text-slate-700">{DAYS[slot.day_of_week]}</td>
+              <tr key={slot.id} className="border-b border-surface-border last:border-0">
+                <td className="py-2 pr-4 text-ink/80">{DAYS[slot.day_of_week]}</td>
                 <td className="py-2 pr-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-subtle text-ink/80 text-xs font-mono border border-surface-border">
                     {slot.start_time} – {slot.end_time}
                   </span>
                 </td>
-                <td className="py-2 pr-4 text-slate-600">{slot.cart_name ?? '—'}</td>
-                <td className="py-2 pr-4 text-slate-600">{slot.capacity}</td>
+                <td className="py-2 pr-4 text-ink/70">{slot.cart_name ?? '—'}</td>
+                <td className="py-2 pr-4 text-ink/70">{slot.capacity}</td>
                 <td className="py-2 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => setSlotModal({ slot })}
-                      className="text-slate-400 hover:text-slate-700 transition-colors"
+                      className="text-ink/40 hover:text-ink/80 transition-colors"
                       title="Editar turno"
                     >
                       <Pencil size={14} />
@@ -365,19 +346,16 @@ export default function Locations() {
     ? { name: editingLocation.name, address: editingLocation.address ?? '', notes: editingLocation.notes ?? '' }
     : EMPTY_LOCATION_FORM
 
-  if (loading) return <div className="p-8 text-slate-500">Carregando...</div>
+  if (loading) return <div className="p-8 text-ink/60">Carregando...</div>
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-slate-800">Locais</h1>
-        <button
-          onClick={() => setLocationModal('new')}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 text-white hover:bg-slate-800 transition-colors"
-        >
+        <h1 className="text-xl font-semibold text-ink">Locais</h1>
+        <Button variant="primary" onClick={() => setLocationModal('new')}>
           <Plus size={16} />
           Novo Local
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -386,10 +364,11 @@ export default function Locations() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full">
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px]">
           <thead>
-            <tr className="text-left text-xs font-medium text-slate-500 bg-gray-50 border-b border-gray-200">
+            <tr className="text-left text-xs font-medium text-ink/70 bg-surface-subtle border-b border-surface-border">
               <th className="px-6 py-3">Nome</th>
               <th className="px-6 py-3">Endereço</th>
               <th className="px-6 py-3">Ativo</th>
@@ -399,7 +378,7 @@ export default function Locations() {
           <tbody>
             {locations.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-400 italic">
+                <td colSpan={4} className="px-6 py-8 text-center text-sm text-ink/40 italic">
                   Nenhum local cadastrado.
                 </td>
               </tr>
@@ -407,10 +386,10 @@ export default function Locations() {
             {locations.map((loc) => (
               <Fragment key={loc.id}>
                 <tr
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
+                  className="border-b border-surface-border last:border-0 hover:bg-surface-subtle transition-colors"
                 >
-                  <td className="px-6 py-3 font-medium text-slate-800">{loc.name}</td>
-                  <td className="px-6 py-3 text-slate-500 text-sm">{loc.address || '—'}</td>
+                  <td className="px-6 py-3 font-medium text-ink">{loc.name}</td>
+                  <td className="px-6 py-3 text-ink/60 text-sm">{loc.address || '—'}</td>
                   <td className="px-6 py-3">
                     <Badge active={loc.active === true} />
                   </td>
@@ -418,14 +397,14 @@ export default function Locations() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => toggleExpand(loc.id)}
-                        className="text-slate-400 hover:text-slate-700 transition-colors"
+                        className="text-ink/40 hover:text-ink/80 transition-colors"
                         title={expandedId === loc.id ? 'Recolher turnos' : 'Expandir turnos'}
                       >
                         {expandedId === loc.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
                       <button
                         onClick={() => setLocationModal({ location: loc })}
-                        className="text-slate-400 hover:text-slate-700 transition-colors"
+                        className="text-ink/40 hover:text-ink/80 transition-colors"
                         title="Editar local"
                       >
                         <Pencil size={15} />
@@ -454,7 +433,8 @@ export default function Locations() {
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Card>
 
       {locationModal && (
         <Modal

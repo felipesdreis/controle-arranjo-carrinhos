@@ -7,6 +7,7 @@ import {
   updateUserApprovalStatus,
   updateUserRole,
 } from '../../api/userProfiles'
+import Card from '../../components/ui/Card'
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
@@ -81,17 +82,17 @@ export default function AdminUsersPage() {
     <div className="flex flex-col h-full gap-6">
       {/* Cabeçalho */}
       <div className="flex items-center gap-3">
-        <Shield size={22} className="text-slate-700" />
+        <Shield size={22} className="text-ink/70" />
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">Administração de Usuários</h1>
-          <p className="text-sm text-slate-500">Gerencie aprovações e papéis dos usuários do sistema</p>
+          <h1 className="text-xl font-semibold text-ink">Administração de Usuários</h1>
+          <p className="text-sm text-ink/60">Gerencie aprovações e papéis dos usuários do sistema</p>
         </div>
       </div>
 
       {/* Conteúdo */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <Card className="overflow-hidden">
         {loading && (
-          <div className="p-8 text-slate-500 text-sm text-center">Carregando usuários...</div>
+          <div className="p-8 text-ink/60 text-sm text-center">Carregando usuários...</div>
         )}
 
         {error && (
@@ -99,27 +100,27 @@ export default function AdminUsersPage() {
         )}
 
         {!loading && !error && users.length === 0 && (
-          <div className="p-8 text-slate-400 text-sm text-center">Nenhum usuário encontrado.</div>
+          <div className="p-8 text-ink/40 text-sm text-center">Nenhum usuário encontrado.</div>
         )}
 
         {!loading && !error && users.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="px-6 py-3 text-left font-medium text-slate-600">E-mail</th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-600">Status</th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-600">Papel</th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-600">Cadastrado em</th>
-                  <th className="px-6 py-3 text-right font-medium text-slate-600">Ações</th>
+                <tr className="border-b border-surface-border bg-surface-subtle">
+                  <th className="px-6 py-3 text-left font-medium text-ink/70">E-mail</th>
+                  <th className="px-6 py-3 text-left font-medium text-ink/70">Status</th>
+                  <th className="px-6 py-3 text-left font-medium text-ink/70">Papel</th>
+                  <th className="px-6 py-3 text-left font-medium text-ink/70">Cadastrado em</th>
+                  <th className="px-6 py-3 text-right font-medium text-ink/70">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-surface-border">
                 {users.map((u) => {
                   const busy = actionLoading === u.user_id
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-slate-700 max-w-[240px] truncate">
+                    <tr key={u.id} className="hover:bg-surface-subtle transition-colors">
+                      <td className="px-6 py-4 text-sm text-ink/80 max-w-[240px] truncate">
                         {u.email ?? '—'}
                       </td>
                       <td className="px-6 py-4">
@@ -137,17 +138,17 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-6 py-4">
                         {u.role === 'admin' ? (
-                          <span className="inline-flex items-center gap-1 text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                          <span className="inline-flex items-center gap-1 text-accent-purple bg-accent-purple-soft border border-accent-purple/20 rounded-full px-2.5 py-0.5 text-xs font-medium">
                             <Shield size={11} />
                             Admin
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                          <span className="inline-flex items-center gap-1 text-ink/60 bg-surface-subtle border border-surface-border rounded-full px-2.5 py-0.5 text-xs font-medium">
                             Usuário
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-slate-500">
+                      <td className="px-6 py-4 text-ink/60">
                         {formatDate(u.created_at)}
                       </td>
                       <td className="px-6 py-4">
@@ -173,7 +174,7 @@ export default function AdminUsersPage() {
                             <button
                               disabled={busy}
                               onClick={() => handleRoleChange(u.user_id, 'admin')}
-                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-purple-200 text-purple-700 hover:bg-purple-50 disabled:opacity-50 transition-colors"
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-accent-purple/30 text-accent-purple hover:bg-accent-purple-soft disabled:opacity-50 transition-colors"
                             >
                               <UserCheck size={12} />
                               Tornar Admin
@@ -188,7 +189,7 @@ export default function AdminUsersPage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import useAppStore from './store/useAppStore'
 import useAuthStore from './store/useAuthStore'
@@ -37,12 +37,13 @@ function AdminRoute({ children }) {
 }
 
 function AppLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-auto p-6">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-auto p-4 md:p-6 bg-surface-bg">
           <Routes>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />

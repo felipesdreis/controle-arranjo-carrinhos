@@ -20,15 +20,16 @@ const NAV_ITEMS = [
   { to: '/report', label: 'Relatório', Icon: FileText },
 ]
 
-function NavItem({ to, label, Icon }) {
+function NavItem({ to, label, Icon, onClose }) {
   return (
     <NavLink
       to={to}
+      onClick={onClose}
       className={({ isActive }) =>
         `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
           isActive
-            ? 'bg-slate-700 text-white'
-            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+            ? 'bg-brand-mint/10 text-brand-mint'
+            : 'text-white/60 hover:text-white hover:bg-white/5'
         }`
       }
     >
@@ -38,52 +39,68 @@ function NavItem({ to, label, Icon }) {
   )
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   return (
-    <aside className="w-64 bg-slate-800 flex flex-col shrink-0">
-      <div className="px-6 py-5 border-b border-slate-700">
-        <h1 className="text-white font-semibold text-base leading-tight">
-          Testemunho Público
-        </h1>
-        <p className="text-slate-400 text-xs mt-0.5">Controle de Arranjo</p>
-      </div>
+    <>
+      {/* Overlay para mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} />
-        ))}
-      </nav>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-brand-dark flex flex-col shrink-0
+          transform transition-transform duration-200
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:static md:translate-x-0 md:transform-none`}
+      >
+        <div className="px-6 py-5 border-b border-white/10">
+          <h1 className="text-white font-bold text-base leading-tight">
+            Testemunho Público
+          </h1>
+          <p className="text-white/50 text-xs mt-0.5">Controle de Arranjo</p>
+        </div>
 
-      <div className="px-3 py-4 border-t border-slate-700 space-y-1">
-        <AdminOnly>
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {NAV_ITEMS.map((item) => (
+            <NavItem key={item.to} {...item} onClose={onClose} />
+          ))}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/10 space-y-1">
+          <AdminOnly>
+            <NavLink
+              to="/admin/users"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-brand-mint/10 text-brand-mint'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`
+              }
+            >
+              <Shield size={18} />
+              Administração
+            </NavLink>
+          </AdminOnly>
           <NavLink
-            to="/admin/users"
+            to="/settings"
+            onClick={onClose}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                  ? 'bg-brand-mint/10 text-brand-mint'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
               }`
             }
           >
-            <Shield size={18} />
-            Administração
+            <Settings size={18} />
+            Preferências
           </NavLink>
-        </AdminOnly>
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-              isActive
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-            }`
-          }
-        >
-          <Settings size={18} />
-          Preferências
-        </NavLink>
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   )
 }

@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-color: #EDF2EE;
+}
+
 @media print {
   body * {
     visibility: hidden;

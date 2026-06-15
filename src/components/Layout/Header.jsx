@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
 import useAuthStore from '../../store/useAuthStore'
 
 const PAGE_TITLES = {
@@ -13,7 +13,7 @@ const PAGE_TITLES = {
   '/settings': 'Preferências',
 }
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { user, signOut } = useAuthStore()
@@ -29,8 +29,13 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-      <h2 className="text-gray-800 font-semibold text-lg">{title}</h2>
+    <header className="bg-surface-card border-b border-surface-border px-6 py-4 flex items-center justify-between shrink-0">
+      <div className="flex items-center gap-3">
+        <button onClick={onMenuClick} className="md:hidden p-2 rounded-lg hover:bg-surface-subtle">
+          <Menu size={20} className="text-ink" />
+        </button>
+        <h2 className="text-ink font-semibold text-lg">{title}</h2>
+      </div>
 
       {/* Área do usuário — US-09 (email) e US-06 (sair) */}
       <div className="flex items-center gap-3">

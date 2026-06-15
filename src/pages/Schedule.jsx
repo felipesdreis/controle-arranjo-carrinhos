@@ -6,6 +6,8 @@ import useAppStore from '../store/useAppStore'
 import { getSlotsWithDetails, createSlot as createSlotApi, updateSlot as updateSlotApi, deleteSlot as deleteSlotApi } from '../api/slots'
 import { getAssignmentsByWeek, upsertAssignment, deleteAssignmentsByWeek } from '../api/assignments'
 import { getScheduleWeeks, createScheduleWeek } from '../api/scheduleWeeks'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0]
@@ -315,33 +317,33 @@ export default function Schedule() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 bg-white shrink-0">
+      <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-surface-border bg-surface-card shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMonday((m) => subWeeks(m, 1))}
-            className="p-2 rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
+            className="p-2 rounded-lg border border-surface-border text-ink/70 hover:bg-surface-subtle transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
           <div className="text-center min-w-[210px]">
-            <p className="font-semibold text-slate-800 text-sm">Semana de {weekLabel}</p>
+            <p className="font-semibold text-ink text-sm">Semana de {weekLabel}</p>
           </div>
           <button
             onClick={() => setMonday((m) => addWeeks(m, 1))}
-            className="p-2 rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
+            className="p-2 rounded-lg border border-surface-border text-ink/70 hover:bg-surface-subtle transition-colors"
           >
             <ChevronRight size={16} />
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="subtle"
             onClick={() => { setShowSlotForm(false); setShowSlotManager(true) }}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
           >
             <Settings size={14} />
             Gerenciar Turnos
-          </button>
+          </Button>
           {week && (
             <>
               <button
@@ -357,13 +359,13 @@ export default function Schedule() {
               >
                 Limpar tudo
               </button>
-              <button
+              <Button
+                variant="primary"
                 onClick={() => navigate('/report')}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors"
               >
                 <FileText size={14} />
                 Ver relatório
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -372,71 +374,73 @@ export default function Schedule() {
       {/* Prompt: semana não existe */}
       {showPrompt && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-sm w-full">
-            <p className="font-semibold text-slate-800 mb-1">Semana não encontrada</p>
-            <p className="text-sm text-slate-500 mb-6">
+          <Card className="p-8 text-center max-w-sm w-full">
+            <p className="font-semibold text-ink mb-1">Semana não encontrada</p>
+            <p className="text-sm text-ink/60 mb-6">
               Deseja criar a programação para a semana de {weekLabel}?
             </p>
             <div className="flex flex-col gap-3">
-              <button
+              <Button
+                variant="primary"
+                className="w-full justify-center"
                 onClick={() => handleCreateWeek(null)}
-                className="bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
               >
                 Criar semana vazia
-              </button>
+              </Button>
               {prevWeek && (
-                <button
+                <Button
+                  variant="subtle"
+                  className="w-full justify-center"
                   onClick={() => handleCreateWeek(prevWeek)}
-                  className="border border-slate-300 hover:border-slate-500 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
                 >
                   Copiar da semana de{' '}
                   {format(new Date(prevWeek.week_start + 'T00:00:00'), 'dd/MM/yyyy')}
-                </button>
+                </Button>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Grade semanal */}
       {week && (
-        <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="flex-1 overflow-auto px-4 md:px-6 py-4">
           {grid.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-slate-400 text-sm mb-3">
+                <p className="text-ink/40 text-sm mb-3">
                   Nenhum turno configurado ainda.
                 </p>
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => { setShowSlotForm(false); setShowSlotManager(true) }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors mx-auto"
                 >
                   <Plus size={14} />
                   Adicionar turno
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
               {grid.map((cart) => (
-                <div key={cart.cart_id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-                  <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
-                    <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700">
+                <Card key={cart.cart_id} className="overflow-x-auto">
+                  <div className="px-4 py-2 border-b border-surface-border bg-surface-subtle">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-ink/70">
                       Carrinho: {cart.cart_name}
                     </h3>
                   </div>
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full min-w-[640px] text-sm border-collapse">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-left px-4 py-3 font-medium text-slate-600 w-24 shrink-0">
+                      <tr className="bg-surface-subtle border-b border-surface-border">
+                        <th className="text-left px-4 py-3 font-medium text-ink/70 w-24 shrink-0">
                           Período
                         </th>
                         {DISPLAY_DAYS.map((d) => {
                           const date = addDays(monday, DAY_OFFSET[d])
                           return (
-                            <th key={d} className="px-2 py-3 font-medium text-slate-600 text-center min-w-[120px]">
+                            <th key={d} className="px-2 py-3 font-medium text-ink/70 text-center min-w-[120px]">
                               <div>{DAY_LABELS[d]}</div>
-                              <div className="text-xs text-slate-400 font-normal">{format(date, 'dd/MM')}</div>
+                              <div className="text-xs text-ink/40 font-normal">{format(date, 'dd/MM')}</div>
                             </th>
                           )
                         })}
@@ -444,15 +448,15 @@ export default function Schedule() {
                     </thead>
                     <tbody>
                       {cart.periods.map((periodObj) => (
-                        <tr key={periodObj.period} className="border-b border-gray-100 last:border-0 align-top">
-                          <td className="px-4 py-2 font-medium text-xs text-slate-600 shrink-0 whitespace-nowrap">
+                        <tr key={periodObj.period} className="border-b border-surface-border last:border-0 align-top">
+                          <td className="px-4 py-2 font-medium text-xs text-ink/70 shrink-0 whitespace-nowrap">
                             {periodObj.period}
                           </td>
                           {DISPLAY_DAYS.map((d) => {
                             const daySlots = periodObj.days[d]
                             if (!daySlots || daySlots.length === 0) {
                               return (
-                                <td key={d} className="px-2 py-2 text-center text-slate-200 text-xs">—</td>
+                                <td key={d} className="px-2 py-2 text-center text-ink/20 text-xs">—</td>
                               )
                             }
                             return (
@@ -474,8 +478,8 @@ export default function Schedule() {
                                               isConflict
                                                 ? 'border-amber-400 bg-amber-50 text-amber-800 focus:ring-amber-400'
                                                 : isFilled
-                                                ? 'border-green-300 bg-green-50 text-green-800 focus:ring-green-400'
-                                                : 'border-gray-200 bg-gray-50 text-slate-400 focus:ring-slate-300'
+                                                ? 'border-accent-green/40 bg-accent-green-soft text-accent-green focus:ring-accent-green'
+                                                : 'border-surface-border bg-surface-subtle text-ink/40 focus:ring-brand'
                                             }`}
                                           >
                                             <option value="">— vazio —</option>
@@ -485,7 +489,7 @@ export default function Schedule() {
                                           </select>
                                         )
                                       })}
-                                      <div className="text-xs text-slate-400 mt-0.5 leading-tight">
+                                      <div className="text-xs text-ink/40 mt-0.5 leading-tight">
                                         <span className="block truncate" title={slot.location_name}>{slot.location_name}</span>
                                         <span className="font-mono">{slot.start_time}–{slot.end_time}</span>
                                       </div>
@@ -499,7 +503,7 @@ export default function Schedule() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </Card>
               ))}
             </div>
           )}
@@ -508,13 +512,13 @@ export default function Schedule() {
 
       {/* Legenda */}
       {week && slots.length > 0 && (
-        <div className="px-6 pb-3 flex items-center gap-5 text-xs text-slate-500 shrink-0">
+        <div className="px-4 md:px-6 pb-3 flex items-center gap-5 text-xs text-ink/60 shrink-0">
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded border border-gray-200 bg-gray-50 inline-block" />
+            <span className="w-3 h-3 rounded border border-surface-border bg-surface-subtle inline-block" />
             Vazio
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded border border-green-300 bg-green-50 inline-block" />
+            <span className="w-3 h-3 rounded border border-accent-green/40 bg-accent-green-soft inline-block" />
             Preenchido
           </span>
           <span className="flex items-center gap-1.5">
@@ -527,13 +531,13 @@ export default function Schedule() {
       {/* Modal: Gerenciar Turnos */}
       {showSlotManager && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-surface-card rounded-card shadow-card-hover w-full max-w-2xl max-h-[90vh] flex flex-col">
             {/* Cabeçalho do modal */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="font-semibold text-slate-800">Gerenciar Turnos</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+              <h2 className="font-semibold text-ink">Gerenciar Turnos</h2>
               <button
                 onClick={() => { setShowSlotManager(false); setShowSlotForm(false) }}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors"
+                className="p-1.5 rounded-lg text-ink/40 hover:text-ink/70 hover:bg-surface-subtle transition-colors"
               >
                 <X size={16} />
               </button>
@@ -543,17 +547,17 @@ export default function Schedule() {
             <div className="flex-1 overflow-y-auto px-6 py-4">
               {/* Formulário de criação/edição */}
               {showSlotForm && (
-                <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 mb-5">
-                  <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                <div className="bg-surface-subtle rounded-lg border border-surface-border p-4 mb-5">
+                  <h3 className="text-sm font-semibold text-ink mb-3">
                     {editingSlot ? 'Editar Turno' : 'Novo Turno'}
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Local</label>
+                      <label className="block text-xs font-medium text-ink/70 mb-1">Local</label>
                       <select
                         value={slotForm.location_id}
                         onChange={(e) => setSlotForm((f) => ({ ...f, location_id: e.target.value }))}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                       >
                         <option value="">Selecione um local</option>
                         {activeLocations.map((l) => (
@@ -562,11 +566,11 @@ export default function Schedule() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Dia da semana</label>
+                      <label className="block text-xs font-medium text-ink/70 mb-1">Dia da semana</label>
                       <select
                         value={slotForm.day_of_week}
                         onChange={(e) => setSlotForm((f) => ({ ...f, day_of_week: e.target.value }))}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                       >
                         {DAY_LABELS.map((label, i) => (
                           <option key={i} value={i}>{label}</option>
@@ -574,11 +578,11 @@ export default function Schedule() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Carrinho</label>
+                      <label className="block text-xs font-medium text-ink/70 mb-1">Carrinho</label>
                       <select
                         value={slotForm.cart_id}
                         onChange={(e) => setSlotForm((f) => ({ ...f, cart_id: e.target.value }))}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                       >
                         <option value="">— nenhum —</option>
                         {activeCarts.map((c) => (
@@ -587,25 +591,25 @@ export default function Schedule() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Hora início</label>
+                      <label className="block text-xs font-medium text-ink/70 mb-1">Hora início</label>
                       <input
                         type="time"
                         value={slotForm.start_time}
                         onChange={(e) => setSlotForm((f) => ({ ...f, start_time: e.target.value }))}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Hora fim</label>
+                      <label className="block text-xs font-medium text-ink/70 mb-1">Hora fim</label>
                       <input
                         type="time"
                         value={slotForm.end_time}
                         onChange={(e) => setSlotForm((f) => ({ ...f, end_time: e.target.value }))}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Capacidade (pessoas)</label>
+                      <label className="block text-xs font-medium text-ink/70 mb-1">Capacidade (pessoas)</label>
                       <input
                         type="number"
                         min="1"
@@ -619,15 +623,15 @@ export default function Schedule() {
                             return next
                           })
                         }}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                        className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                       />
                     </div>
                   </div>
 
                   {/* Seção de irmãos — só quando há semana aberta */}
                   {week ? (
-                    <div className="mt-4 pt-3 border-t border-slate-200">
-                      <label className="block text-xs font-medium text-slate-600 mb-2">
+                    <div className="mt-4 pt-3 border-t border-surface-border">
+                      <label className="block text-xs font-medium text-ink/70 mb-2">
                         Quem vai estar &mdash; semana de {weekLabel}
                       </label>
                       <div className="flex flex-col gap-1.5">
@@ -643,7 +647,7 @@ export default function Schedule() {
                                 return next
                               })
                             }}
-                            className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                            className="w-full rounded-md border border-surface-border px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
                           >
                             <option value="">— vazio —</option>
                             {activeBrothers.map((b) => (
@@ -654,7 +658,7 @@ export default function Schedule() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-400 mt-3">
+                    <p className="text-xs text-ink/40 mt-3">
                       Crie a programação da semana para designar irmãos.
                     </p>
                   )}
@@ -663,64 +667,59 @@ export default function Schedule() {
                     <p className="text-xs text-red-600 mt-2">{slotFormError}</p>
                   )}
                   <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={handleSlotFormSave}
-                      className="px-4 py-1.5 text-sm font-medium rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors"
-                    >
-                      Salvar
-                    </button>
-                    <button
+                    <Button variant="primary" onClick={handleSlotFormSave}>Salvar</Button>
+                    <Button
+                      variant="subtle"
                       onClick={() => { setShowSlotForm(false); setEditingSlot(null); setSlotFormError('') }}
-                      className="px-4 py-1.5 text-sm font-medium rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
                     >
                       Cancelar
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
 
               {/* Lista de turnos */}
               {slotGroups.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-6">
+                <p className="text-sm text-ink/40 text-center py-6">
                   Nenhum turno cadastrado. Clique em "+ Novo Turno" para começar.
                 </p>
               ) : (
                 <div className="space-y-4">
                   {slotGroups.map((group) => (
                     <div key={group.name}>
-                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                      <div className="text-xs font-semibold text-ink/60 uppercase tracking-wide mb-1">
                         {group.name}
                       </div>
-                      <div className="rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="rounded-lg border border-surface-border overflow-hidden">
                         {group.slots.map((slot, i) => (
                           <div
                             key={slot.id}
-                            className={`flex items-center justify-between px-3 py-2 text-sm ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                            className={`flex items-center justify-between px-3 py-2 text-sm ${i > 0 ? 'border-t border-surface-border' : ''}`}
                           >
                             <div className="flex items-center gap-3">
-                              <span className="font-medium text-slate-700 w-8">{DAY_LABELS[slot.day_of_week]}</span>
-                              <span className="text-slate-500 font-mono text-xs">
+                              <span className="font-medium text-ink/80 w-8">{DAY_LABELS[slot.day_of_week]}</span>
+                              <span className="text-ink/60 font-mono text-xs">
                                 {slot.start_time} – {slot.end_time}
                               </span>
                               {slot.cart_name && (
-                                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5">
+                                <span className="text-xs bg-accent-blue-soft text-accent-blue border border-accent-blue/20 rounded px-1.5 py-0.5">
                                   {slot.cart_name}
                                 </span>
                               )}
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-ink/40">
                                 {slot.capacity} {slot.capacity === 1 ? 'pessoa' : 'pessoas'}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => openEditSlot(slot)}
-                                className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors"
+                                className="p-1.5 rounded text-ink/40 hover:text-ink/70 hover:bg-surface-subtle transition-colors"
                               >
                                 <Pencil size={13} />
                               </button>
                               <button
                                 onClick={() => handleDeleteSlot(slot)}
-                                className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                className="p-1.5 rounded text-ink/40 hover:text-red-600 hover:bg-red-50 transition-colors"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -735,14 +734,11 @@ export default function Schedule() {
             </div>
 
             {/* Rodapé do modal */}
-            <div className="px-6 py-3 border-t border-gray-200">
-              <button
-                onClick={openNewSlot}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors"
-              >
+            <div className="px-6 py-3 border-t border-surface-border">
+              <Button variant="primary" onClick={openNewSlot}>
                 <Plus size={14} />
                 Novo Turno
-              </button>
+              </Button>
             </div>
           </div>
         </div>

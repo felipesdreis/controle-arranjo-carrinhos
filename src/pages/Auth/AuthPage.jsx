@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import SignIn from './SignIn'
 import SignUp from './SignUp'
+import Card from '../../components/ui/Card'
 
 const MODES = /** @type {const} */ ({ signIn: 'signIn', signUp: 'signUp' })
 
@@ -19,25 +20,25 @@ export default function AuthPage() {
   const isSignIn = mode === MODES.signIn
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface-bg px-4">
       <div className="w-full max-w-sm">
         {/* Cabeçalho da marca */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-semibold text-slate-800">Testemunho Público</h1>
-          <p className="text-slate-500 text-sm mt-1">Controle de Arranjo de Carrinhos</p>
+          <h1 className="text-2xl font-semibold text-ink">Testemunho Público</h1>
+          <p className="text-ink/60 text-sm mt-1">Controle de Arranjo de Carrinhos</p>
         </div>
 
         {/* Card principal */}
-        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+        <Card className="overflow-hidden">
           {/* Abas de navegação */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex border-b border-surface-border">
             <button
               type="button"
               onClick={() => setMode(MODES.signIn)}
               className={`flex-1 py-3.5 text-sm font-medium transition-colors focus:outline-none ${
                 isSignIn
-                  ? 'text-slate-800 border-b-2 border-slate-800 bg-white'
-                  : 'text-slate-400 hover:text-slate-600 bg-slate-50'
+                  ? 'text-ink border-b-2 border-brand bg-surface-card'
+                  : 'text-ink/50 hover:text-ink/80 bg-surface-subtle'
               }`}
             >
               Entrar
@@ -47,8 +48,8 @@ export default function AuthPage() {
               onClick={() => setMode(MODES.signUp)}
               className={`flex-1 py-3.5 text-sm font-medium transition-colors focus:outline-none ${
                 !isSignIn
-                  ? 'text-slate-800 border-b-2 border-slate-800 bg-white'
-                  : 'text-slate-400 hover:text-slate-600 bg-slate-50'
+                  ? 'text-ink border-b-2 border-brand bg-surface-card'
+                  : 'text-ink/50 hover:text-ink/80 bg-surface-subtle'
               }`}
             >
               Criar Conta
@@ -62,7 +63,7 @@ export default function AuthPage() {
               : <SignUp onSwitchMode={() => setMode(MODES.signIn)} />
             }
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   )

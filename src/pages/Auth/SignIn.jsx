@@ -55,14 +55,14 @@ export default function SignIn({ onSwitchMode }) {
       <div className="space-y-1">
         <label
           htmlFor="signin-email"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-ink"
         >
           Email
         </label>
         <div className="relative">
           <Mail
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
           />
           <input
             id="signin-email"
@@ -72,7 +72,7 @@ export default function SignIn({ onSwitchMode }) {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seu@email.com"
             required
-            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-surface-border text-sm text-ink placeholder-ink/40 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition"
           />
         </div>
       </div>
@@ -80,14 +80,14 @@ export default function SignIn({ onSwitchMode }) {
       <div className="space-y-1">
         <label
           htmlFor="signin-password"
-          className="block text-sm font-medium text-slate-700"
+          className="block text-sm font-medium text-ink"
         >
           Senha
         </label>
         <div className="relative">
           <Lock
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
           />
           <input
             id="signin-password"
@@ -97,7 +97,7 @@ export default function SignIn({ onSwitchMode }) {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mínimo 8 caracteres"
             required
-            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition"
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-surface-border text-sm text-ink placeholder-ink/40 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition"
           />
         </div>
       </div>
@@ -105,18 +105,18 @@ export default function SignIn({ onSwitchMode }) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
       >
         <LogIn size={16} />
         {loading ? 'Entrando…' : 'Entrar'}
       </button>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-sm text-ink/60">
         Não tem uma conta?{' '}
         <button
           type="button"
           onClick={onSwitchMode}
-          className="font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 transition-colors"
+          className="font-medium text-ink underline underline-offset-2 hover:text-brand transition-colors"
         >
           Criar conta
         </button>

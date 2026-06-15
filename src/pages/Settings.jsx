@@ -3,6 +3,8 @@ import { Download, Upload, CheckCircle, Info } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { exportAllData, downloadJSON } from '../api/export'
 import { importDataFromJSON } from '../api/import'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
 
 export default function Settings() {
   const { congregationName, saveCongregationName } = useAppStore()
@@ -60,18 +62,18 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-8 max-w-xl">
+    <div className="p-4 md:p-8 max-w-xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Preferências</h1>
-        <p className="text-slate-500 text-sm mt-1">Configurações gerais da aplicação</p>
+        <h1 className="text-2xl font-bold text-ink">Preferências</h1>
+        <p className="text-ink/60 text-sm mt-1">Configurações gerais da aplicação</p>
       </div>
 
       {/* Seção: Congregação */}
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-slate-700 mb-4">Dados da congregação</h2>
+      <Card className="p-6 mb-4">
+        <h2 className="font-semibold text-ink mb-4">Dados da congregação</h2>
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-ink mb-1">
               Nome da congregação
             </label>
             <input
@@ -79,47 +81,43 @@ export default function Settings() {
               value={localName}
               onChange={(e) => setLocalName(e.target.value)}
               placeholder="Ex: Congregação Centro"
-              className="border border-gray-300 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+              className="border border-surface-border rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
             />
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-ink/40 mt-1">
               Aparece no cabeçalho do relatório PDF.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Salvar
-            </button>
+            <Button type="submit" variant="primary">Salvar</Button>
             {saved && (
-              <span className="flex items-center gap-1.5 text-green-600 text-sm">
+              <span className="flex items-center gap-1.5 text-accent-green text-sm">
                 <CheckCircle size={15} />
                 Salvo!
               </span>
             )}
           </div>
         </form>
-      </section>
+      </Card>
 
       {/* Seção: Backup de dados */}
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-        <h2 className="font-semibold text-slate-700 mb-1">Backup de dados</h2>
-        <p className="text-sm text-slate-500 mb-5">
+      <Card className="p-6 mb-4">
+        <h2 className="font-semibold text-ink mb-1">Backup de dados</h2>
+        <p className="text-sm text-ink/60 mb-5">
           Exporte todos os seus dados em formato JSON para fazer backup ou transferir para outro
           dispositivo. Importe um backup anterior para restaurar os dados.
         </p>
 
         <div className="flex flex-col gap-3">
-          <button
+          <Button
+            variant="subtle"
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-slate-700 hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 w-fit"
+            className="w-fit disabled:opacity-50"
           >
             <Download size={15} />
             {exporting ? 'Exportando...' : 'Exportar dados (JSON)'}
-          </button>
+          </Button>
 
           {exportMsg && (
             <div
@@ -137,12 +135,12 @@ export default function Settings() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={importing}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors text-sm font-medium w-fit disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-surface-border text-ink text-sm font-medium hover:bg-surface-subtle transition-colors w-fit disabled:opacity-50"
             >
               <Upload size={15} />
               {importing ? 'Importando...' : 'Importar dados (JSON)'}
             </button>
-            <p className="text-xs text-slate-400 mt-1 ml-1">
+            <p className="text-xs text-ink/40 mt-1 ml-1">
               Atenção: mescla os dados importados com os existentes.
             </p>
             <input
@@ -166,20 +164,20 @@ export default function Settings() {
             </div>
           )}
         </div>
-      </section>
+      </Card>
 
       {/* Seção: Sobre */}
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h2 className="font-semibold text-slate-700 mb-4 flex items-center gap-2">
-          <Info size={16} className="text-slate-400" />
+      <Card className="p-6">
+        <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
+          <Info size={16} className="text-ink/40" />
           Sobre
         </h2>
-        <div className="space-y-1 text-sm text-slate-600">
+        <div className="space-y-1 text-sm text-ink/70">
           <p><span className="font-medium">Versão:</span> 0.2.0</p>
           <p><span className="font-medium">Banco de dados:</span> Supabase (PostgreSQL)</p>
           <p><span className="font-medium">Autenticação:</span> Supabase Auth</p>
         </div>
-      </section>
+      </Card>
     </div>
   )
 }
