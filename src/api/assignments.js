@@ -3,11 +3,12 @@ import { getSupabaseClient } from './client'
 export async function getAssignments() {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('assignments')
     .select('*')
-    .eq('user_id', user.id)
   if (error) throw error
   return data
 }
@@ -15,11 +16,12 @@ export async function getAssignments() {
 export async function getAssignmentsByWeek(weekId) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('assignments')
     .select('*')
-    .eq('user_id', user.id)
     .eq('week_id', weekId)
   if (error) throw error
   return data
@@ -28,7 +30,9 @@ export async function getAssignmentsByWeek(weekId) {
 export async function upsertAssignment(weekId, slotId, position, brotherId) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('assignments')
     .upsert(
@@ -43,13 +47,30 @@ export async function upsertAssignment(weekId, slotId, position, brotherId) {
 export async function deleteAssignment(weekId, slotId, position) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { error } = await supabase
     .from('assignments')
     .delete()
     .eq('week_id', weekId)
     .eq('slot_id', slotId)
     .eq('position', position)
+    .eq('user_id', user.id)
+  if (error) throw error
+}
+
+// Deleta TODAS as assignments de uma semana (para "Limpar tudo")
+export async function deleteAssignmentsByWeek(weekId) {
+  const supabase = getSupabaseClient()
+  if (!supabase) throw new Error('Supabase not configured')
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
+  const { error } = await supabase
+    .from('assignments')
+    .delete()
+    .eq('week_id', weekId)
     .eq('user_id', user.id)
   if (error) throw error
 }

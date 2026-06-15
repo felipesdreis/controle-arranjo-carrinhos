@@ -12,12 +12,13 @@
 |---|---|---|
 | EP-01 | Infraestrutura Supabase | Setup do client Supabase, variáveis de ambiente, tipagem TypeScript |
 | EP-02 | Autenticação | Sign-up, sign-in, sign-out, proteção de rotas, sessão persistente |
-| EP-03 | Schema e RLS no Supabase | DDL PostgreSQL, RLS policies, tabela user_settings |
+| EP-03 | Schema PostgreSQL no Supabase | DDL PostgreSQL, tabela user_settings, isolamento por user_id |
 | EP-04 | Camada de API | CRUD functions por entidade usando Supabase client |
 | EP-05 | Migração do Store (Zustand) | Atualizar useAppStore para operações async com tratamento de erros |
 | EP-06 | Migração de Pages/Componentes | Adaptar interface para loading states, error handling, async/await |
 | EP-07 | Backup e Importação de Dados | Exportar/importar JSON, migração de dados históricos |
 | EP-08 | Remoção de sql.js e OPFS | Limpeza de dependências obsoletas e código morto |
+| EP-09 | Controle de Acesso (Aprovação e Roles) | Aprovação manual de usuários, roles (admin/user), autorização por role, RLS policies baseadas em roles |
 
 ---
 
@@ -356,11 +357,11 @@ Feature: Exibir email do usuário
 
 ---
 
-# EP-03 — Schema e RLS no Supabase
+# EP-03 — Schema PostgreSQL no Supabase
 
 ## US-10 — Criar schema PostgreSQL no Supabase (tabela auth.users)
 
-**Épico**: EP-03 — Schema e RLS no Supabase
+**Épico**: EP-03 — Schema PostgreSQL no Supabase
 **Como** administrador do banco, **quero** que Supabase Auth crie a tabela `auth.users` automaticamente, **para que** usuários sejam registrados.
 
 **Critérios de Aceite**:
@@ -382,22 +383,22 @@ Feature: Schema de autenticação Supabase
 **Notas técnicas**:
 - Nenhum DDL necessário; Supabase Auth provisiona automaticamente
 - Validar no SQL editor do Supabase Dashboard
-- Próximos passos: US-11 (tabelas públicas com FK para auth.users.id)
+- Próximos passos: US-11 (tabelas públicas com coluna user_id)
 
 **Depende de**: Nenhuma (setup inicial Supabase)
 
 ---
 
-## US-11 — Criar tabelas públicas com RLS habilitado
+## US-11 — Criar tabelas públicas com coluna user_id
 
-**Épico**: EP-03 — Schema e RLS no Supabase
-**Como** administrador do banco, **quero** criar tabelas como `brothers`, `carts`, `locations`, etc. com coluna `user_id` e RLS, **para que** dados fiquem isolados por usuário.
+**Épico**: EP-03 — Schema PostgreSQL no Supabase
+**Como** administrador do banco, **quero** criar tabelas como `brothers`, `carts`, `locations`, etc. com coluna `user_id`, **para que** dados fiquem organizados por usuário.
 
 **Critérios de Aceite**:
 ```gherkin
-Feature: Tabelas com isolamento por usuário (RLS)
+Feature: Tabelas com isolamento por user_id
 
-  Scenario: Tabela brothers é criada com user_id e RLS
+  Scenario: Tabela brothers é criada com user_id
     Given que acesso SQL editor do Supabase
     When executo migration para criar tabela brothers
     Then tabela contém:
@@ -405,14 +406,11 @@ Feature: Tabelas com isolamento por usuário (RLS)
       - user_id (UUID, FK para auth.users.id, NOT NULL)
       - name (TEXT, NOT NULL)
       - created_at (TIMESTAMP, default CURRENT_TIMESTAMP)
-    And RLS está habilitado (ALTER TABLE ... ENABLE ROW LEVEL SECURITY)
 
-  Scenario: RLS policy garante isolamento de dados
-    Given que RLS está habilitado em brothers
-    When criei uma policy SELECT
-    Then policy é: (auth.uid() = user_id)
-    And usuário só vê suas próprias linhas
-    And nenhum usuário consegue ver dados de outro usuário
+  Scenario: Outras tabelas seguem estrutura similar
+    Given que tenho estrutura de brothers
+    When crio carts, locations, groups, slots, schedule_weeks, assignments
+    Then todas contêm user_id (FK para auth.users.id) e created_at
 ```
 
 **Notas técnicas**:
@@ -422,20 +420,7 @@ Feature: Tabelas com isolamento por usuário (RLS)
   - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
   - `user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`
   - `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
-  - `updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP` (opcional)
-- RLS policy template:
-  ```sql
-  ALTER TABLE brothers ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY "Users can view own data" ON brothers
-    FOR SELECT USING (auth.uid() = user_id);
-  CREATE POLICY "Users can insert own data" ON brothers
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
-  CREATE POLICY "Users can update own data" ON brothers
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-  CREATE POLICY "Users can delete own data" ON brothers
-    FOR DELETE USING (auth.uid() = user_id);
-  ```
-- Repetir para todas as 7 tabelas
+- Nota: Isolamento por `user_id` e controle de acesso será gerenciado via RBAC em EP-09, não via RLS
 - Executar via CLI: `supabase db push` ou via SQL editor do dashboard
 
 **Depende de**: US-10
@@ -444,14 +429,14 @@ Feature: Tabelas com isolamento por usuário (RLS)
 
 ## US-12 — Criar tabela user_settings
 
-**Épico**: EP-03 — Schema e RLS no Supabase
+**Épico**: EP-03 — Schema PostgreSQL no Supabase
 **Como** usuário, **quero** armazenar meu nome de congregação e outras preferências, **para que** a aplicação seja personalizada.
 
 **Critérios de Aceite**:
 ```gherkin
 Feature: Tabela de preferências do usuário
 
-  Scenario: Tabela user_settings é criada com RLS
+  Scenario: Tabela user_settings é criada
     Given que executo migration
     Then tabela user_settings contém:
       - id (UUID, PRIMARY KEY)
@@ -459,7 +444,6 @@ Feature: Tabela de preferências do usuário
       - congregation_name (TEXT, nullable)
       - created_at (TIMESTAMP, default CURRENT_TIMESTAMP)
       - updated_at (TIMESTAMP, default CURRENT_TIMESTAMP)
-    And RLS policies isolam por user_id
 
   Scenario: Um registro por usuário é garantido
     Given que user_id é UNIQUE em user_settings
@@ -470,7 +454,6 @@ Feature: Tabela de preferências do usuário
 **Notas técnicas**:
 - Arquivo: `supabase/migrations/YYYYMMDDHHMMSS_create_user_settings.sql`
 - UNIQUE constraint em user_id para garantir 1:1
-- RLS policies idênticas às de brothers (auth.uid() = user_id)
 - Esta tabela substitui `localStorage` para `congregationName` (atualmente em localStorage)
 - Será criado registro automaticamente no signup (US-13)
 
@@ -480,7 +463,7 @@ Feature: Tabela de preferências do usuário
 
 ## US-13 — Criar trigger para inicializar user_settings no signup
 
-**Épico**: EP-03 — Schema e RLS no Supabase
+**Épico**: EP-03 — Schema PostgreSQL no Supabase
 **Como** usuário novo, **quero** que um registro em user_settings seja criado automaticamente ao me registrar, **para que** possa atualizar meu nome de congregação logo após signup.
 
 **Critérios de Aceite**:
@@ -520,48 +503,10 @@ Feature: Inicialização automática de preferências
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_new_user();
   ```
-- Função é `SECURITY DEFINER` para executar com privilégios de schema owner (sem RLS)
+- Função é `SECURITY DEFINER` para executar com privilégios de schema owner
 - Executar via `supabase db push`
 
 **Depende de**: US-12
-
----
-
-## US-14 — Validar integridade de RLS com testes SQL
-
-**Épico**: EP-03 — Schema e RLS no Supabase
-**Como** administrador, **quero** testar que RLS realmente bloqueia dados de outros usuários, **para que** isolamento seja garantido.
-
-**Critérios de Aceite**:
-```gherkin
-Feature: Validação de isolamento de dados
-
-  Scenario: RLS bloqueia SELECT de dados de outro usuário
-    Given que usuario_a tem id=aaa e usuario_b tem id=bbb
-    When usuario_b tenta SELECT * FROM brothers WHERE user_id = aaa
-    Then query retorna linhas vazias (RLS bloqueia)
-    And nenhum erro é exibido (segurança por obscuridade)
-
-  Scenario: RLS bloqueia INSERT de outro usuário
-    Given que usuario_b está autenticado
-    When tenta INSERT INTO brothers (user_id, name) VALUES ('aaa', 'João')
-    Then erro é lançado (INSERT violates RLS check constraint)
-    And linha não é criada
-
-  Scenario: RLS permite UPDATE/DELETE apenas de próprios dados
-    Given que usuario_a tem 1 linha em brothers
-    When usuario_a faz UPDATE ou DELETE dessa linha
-    Then operação bem-sucedida
-    And quando usuario_b tenta UPDATE/DELETE a mesma linha
-    Then erro é lançado (RLS blocks)
-```
-
-**Notas técnicas**:
-- Testes manuais via SQL editor do Supabase (trocar entre usuários via `set jwt` no SQL editor ou via CLI)
-- Ou automatizar com script Node usando `supabase-js` cliente (avançado, fora do escopo MVP)
-- Validar pelo menos uma tabela (brothers) como prova de conceito
-
-**Depende de**: US-11, US-12
 
 ---
 
@@ -1460,18 +1405,316 @@ Feature: Auditoria de código morto
 
 ---
 
+# EP-09 — Controle de Acesso (Aprovação e Roles)
+
+## US-37 — Criar tabela user_profiles com role e is_approved
+
+**Épico**: EP-09 — Controle de Acesso (Aprovação e Roles)
+**Como** administrador, **quero** uma tabela que armazene role e status de aprovação de cada usuário, **para que** controle quem pode usar a aplicação e quais permissões tem.
+
+**Critérios de Aceite**:
+```gherkin
+Feature: Tabela de perfis de usuário com roles
+
+  Scenario: Tabela user_profiles é criada com campos role e is_approved
+    Given que executo migration no Supabase
+    Then tabela user_profiles contém:
+      - id (UUID, PRIMARY KEY)
+      - user_id (UUID, FK para auth.users.id, UNIQUE, NOT NULL)
+      - role (TEXT, DEFAULT 'user', CHECK (role IN ('admin', 'user')))
+      - is_approved (BOOLEAN, DEFAULT false)
+      - created_at (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+      - updated_at (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+
+  Scenario: Primeiro usuário é criado automaticamente como admin
+    Given que executo um trigger na criação do primeiro usuário
+    When nenhum admin existe ainda
+    Then primeiro signup é automaticamente role='admin', is_approved=true
+    And outros signups têm role='user', is_approved=false (precisam aprovação)
+
+  Scenario: Dados são consultáveis para controle RBAC
+    Given que role e is_approved estão na tabela
+    When aplicação carrega perfil do usuário ao fazer login
+    Then pode verificar role e is_approved para renderização condicional (no app, não via RLS)
+    And controle de acesso é gerenciado via RBAC (Role-Based Access Control), não RLS
+```
+
+**Notas técnicas**:
+- Arquivo: `supabase/migrations/YYYYMMDDHHMMSS_create_user_profiles.sql`
+- Trigger `handle_new_user()` (já existe para user_settings em US-13) será estendido para criar registro em user_profiles
+- Logic de primeiro admin:
+  ```sql
+  CREATE FUNCTION public.handle_new_user()
+  RETURNS TRIGGER AS $$
+  BEGIN
+    INSERT INTO public.user_settings (user_id) VALUES (NEW.id);
+    INSERT INTO public.user_profiles (user_id, role, is_approved)
+    VALUES (NEW.id, 
+            CASE WHEN (SELECT COUNT(*) FROM public.user_profiles WHERE role='admin') = 0 
+                 THEN 'admin' 
+                 ELSE 'user' 
+            END,
+            CASE WHEN (SELECT COUNT(*) FROM public.user_profiles WHERE role='admin') = 0 
+                 THEN true 
+                 ELSE false 
+            END);
+    RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql SECURITY DEFINER;
+  ```
+- Nota: Sem RLS policies nesta tabela. O controle de quem consegue atualizar é feito via RBAC na aplicação (verificado em US-38, US-39, US-40, US-41)
+
+**Depende de**: US-13 (trigger handle_new_user será estendido)
+
+---
+
+## US-38 — Criar página Admin para aprovar/bloquear usuários
+
+**Épico**: EP-09 — Controle de Acesso
+**Como** admin, **quero** uma página que liste usuários pendentes de aprovação e permita aprovar/bloquear, **para que** controle quem acessa a aplicação.
+
+**Critérios de Aceite**:
+```gherkin
+Feature: Painel de aprovação de usuários
+
+  Scenario: Página /admin/users lista usuários pendentes
+    Given que sou admin
+    When navego para /admin/users
+    Then vejo tabela com usuários is_approved=false
+    And cada linha mostra: email, data de criação, status, botões de aprovar/bloquear
+
+  Scenario: Admin aprova usuário
+    Given que vejo usuário pendente na lista
+    When clico em "Aprovar"
+    Then user_profiles.is_approved = true
+    And usuário recebe email confirmando aprovação (opcional)
+    And usuário pode agora fazer login normalmente
+
+  Scenario: Admin bloqueia usuário
+    Given que vejo usuário na lista
+    When clico em "Bloquear"
+    Then user_profiles.is_approved = false
+    And se usuário estiver logado, é feito logout automático
+    And usuário vê mensagem: "Sua conta foi desativada"
+
+  Scenario: Apenas admin consegue acessar /admin/users
+    Given que sou user comum
+    When navego para /admin/users
+    Then sou redirecionado para /dashboard
+    And nenhum dado de outro usuário é exibido
+```
+
+**Notas técnicas**:
+- Arquivo a criar: `src/pages/Admin/Users.jsx`
+- Arquivo a criar: `src/api/admin.js` com funções:
+  ```javascript
+  export async function getPendingUsers() {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, user_id, is_approved, created_at, user_settings!inner(user_id)')
+      .eq('is_approved', false)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  export async function approveUser(userId) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ is_approved: true })
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+
+  export async function blockUser(userId) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ is_approved: false })
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+  ```
+- Componente deve usar `useAuthStore` para verificar se user.role === 'admin'
+- Tabela mostra email via join com `auth.users` (pode ser feito no backend com function SQL)
+
+**Depende de**: US-37, US-15 (API CRUD)
+
+---
+
+## US-39 — Proteger componentes e rotas por role
+
+**Épico**: EP-09 — Controle de Acesso
+**Como** desenvolvedor, **quero** componentes que verificam role antes de renderizar, **para que** UI adapte-se às permissões do usuário.
+
+**Critérios de Aceite**:
+```gherkin
+Feature: Renderização condicional por role
+
+  Scenario: User comum não vê menu de /admin
+    Given que sou user
+    When abro a aplicação
+    Then sidebar não exibe link "/admin/users"
+
+  Scenario: User comum só acessa /report (read-only)
+    Given que sou user
+    When navego para /brothers, /carts, /locations, etc.
+    Then sou redirecionado para /report
+    And vejo aviso: "Você tem acesso apenas ao relatório de programação"
+
+  Scenario: Admin vê todos os menus e pode editar tudo
+    Given que sou admin
+    When abro a aplicação
+    Then todos os links de menu estão visíveis
+    And posso criar, editar, deletar em todas as páginas
+    And /admin/users está acessível
+
+  Scenario: User bloqueado é deslogado automaticamente
+    Given que estou logado como user
+    When admin bloqueia minha conta (is_approved = false)
+    Then ao próximo request, recebo erro 403
+    And sou redirecionado para /auth com mensagem: "Sua conta foi desativada"
+```
+
+**Notas técnicas**:
+- Criar hook: `src/hooks/useRoleCheck.js`
+  ```javascript
+  export function useRoleCheck(requiredRole) {
+    const { user, userProfile } = useAuthStore();
+    if (!user || !userProfile) return false;
+    if (!userProfile.is_approved) return false; // bloqueado
+    if (requiredRole && userProfile.role !== requiredRole) return false;
+    return true;
+  }
+  ```
+- Criar componente: `src/components/AdminOnly.jsx`
+  ```javascript
+  export function AdminOnly({ children }) {
+    const isAdmin = useRoleCheck('admin');
+    return isAdmin ? children : null;
+  }
+  ```
+- Modificar `src/components/Layout/Sidebar.jsx` para renderizar links condicionalmente
+- Modificar `src/App.jsx` para redirecionar user para /report ao tentar acessar rotas protegidas
+- Adicionar verificação em cada página: se is_approved=false, logout imediato
+
+**Depende de**: US-37, US-38
+
+---
+
+## US-40 — Atualizar store com role e is_approved
+
+**Épico**: EP-09 — Controle de Acesso
+**Como** aplicação, **quero** que user role e is_approved sejam carregados automaticamente no store, **para que** componentes possam tomar decisões sem chamar Supabase novamente.
+
+**Critérios de Aceite**:
+```gherkin
+Feature: Store gerencia role e aprovação
+
+  Scenario: User profile é carregado ao fazer login
+    Given que faço login
+    When session é restaurada
+    Then store.userProfile = { role: 'admin'|'user', is_approved: true|false, ... }
+    And store.user = { id, email }
+
+  Scenario: useRoleCheck() usa dados do store
+    Given que tenho userProfile no store
+    When renderizo componente AdminOnly
+    Then verifica store.userProfile.role === 'admin' e store.userProfile.is_approved === true
+
+  Scenario: Logout limpa userProfile
+    Given que estou autenticado
+    When faço logout
+    Then store.userProfile = null
+    And store.user = null
+```
+
+**Notas técnicas**:
+- Modificar `src/store/useAuthStore.js`:
+  ```javascript
+  const useAuthStore = create((set) => ({
+    // ... existing state ...
+    userProfile: null,
+
+    setUserProfile: (profile) => set({ userProfile: profile }),
+
+    initAuth: async () => {
+      // ... existing code ...
+      const { data: { user } } = await client.auth.getUser();
+      if (user) {
+        const { data: profile } = await client
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        set({ userProfile: profile });
+      }
+    },
+  }))
+  ```
+- Modificar `onAuthStateChange()` listener para recarregar userProfile quando session muda
+- Função de logout deve limpar userProfile
+
+**Depende de**: US-37, US-40
+
+---
+
+## US-41 — Criar API CRUD para user_profiles (admin)
+
+**Épico**: EP-09 — Controle de Acesso
+**Como** desenvolvedor, **quero** funções de API para admin gerenciar user_profiles (mudar role, aprovar/bloquear), **para que** página Admin funcione.
+
+**Critérios de Aceite**:
+```gherkin
+Feature: API para gerenciar user_profiles
+
+  Scenario: Função updateUserApprovalStatus(userId, isApproved)
+    Given que sou admin
+    When chamo updateUserApprovalStatus(userId, true)
+    Then user_profiles.is_approved é atualizado
+    And função retorna o perfil atualizado
+
+  Scenario: Função updateUserRole(userId, role)
+    Given que sou admin
+    When chamo updateUserRole(userId, 'admin')
+    Then user_profiles.role é atualizado para 'admin'
+    And função valida que role está em ('admin', 'user')
+
+  Scenario: Apenas admin consegue chamar essas funções
+    Given que sou user
+    When chamo updateUserApprovalStatus()
+    Then erro 403 é retornado (RLS bloqueia)
+    And nenhuma alteração é feita
+```
+
+**Notas técnicas**:
+- Arquivo a criar: `src/api/userProfiles.js`
+- Funções:
+  ```javascript
+  export async function getPendingUsers() { ... }
+  export async function getAllUsers() { ... }
+  export async function updateUserApprovalStatus(userId, isApproved) { ... }
+  export async function updateUserRole(userId, role) { ... }
+  ```
+- RLS policies do US-37 garantem que apenas admins conseguem atualizar
+- Sem validação de permission no código JS (RLS é a fonte da verdade)
+
+**Depende de**: US-37, US-04 (API pattern)
+
+---
+
 # Sumário de Dependências e Ordem de Execução
 
 ## Ordenação sugerida para implementação:
 
 1. **US-01 a US-03** (Infraestrutura — bloqueia tudo)
 2. **US-04 a US-09** (Autenticação — EP-02, bloqueia US-05)
-3. **US-10 a US-14** (Schema Supabase — EP-03, bloqueia US-15+)
+3. **US-10 a US-13** (Schema Supabase — EP-03, bloqueia US-15+)
 4. **US-15 a US-22** (Camada de API — EP-04, bloqueia US-23)
 5. **US-23 a US-25** (Store — EP-05, bloqueia US-26+)
 6. **US-26 a US-31** (Pages/Componentes — EP-06, validação de funcionalidade)
-7. **US-32 a US-33** (Backup/Importação — EP-07, funcionalidade extra)
-8. **US-34 a US-36** (Limpeza — EP-08, finalização)
+7. **US-37 a US-41** (Controle de Acesso com RBAC — EP-09, adicionado após validação de funcionalidade)
+8. **US-32 a US-33** (Backup/Importação — EP-07, funcionalidade extra)
+9. **US-34 a US-36** (Limpeza — EP-08, finalização)
 
 ## Ciclos de teste recomendados:
 
@@ -1480,6 +1723,10 @@ Feature: Auditoria de código morto
 - **Após EP-04**: Testar cada função de API via Node REPL ou teste manual
 - **Após EP-05**: Testar store actions em browser console
 - **Após EP-06**: Testar fluxo completo de user (login → CRUD → logout)
+- **Após EP-09**: Testar aprovação de usuários, roles, acesso condicional por role
+  - Admin aprova user, verifica que user consegue logar
+  - User bloqueado é deslogado automaticamente
+  - User comum vê apenas /report, admin vê tudo
 - **Após EP-07**: Testar exportação/importação com dados reais
 - **Após EP-08**: Garantir que build sem erros, bundle menor, sem warnings
 
@@ -1502,7 +1749,6 @@ Feature: Auditoria de código morto
 | US-11 | supabase/migrations/*.sql | CREATE TABLE + RLS | US-10 |
 | US-12 | supabase/migrations/*.sql | CREATE TABLE user_settings | US-11 |
 | US-13 | supabase/migrations/*.sql | CREATE TRIGGER | US-12 |
-| US-14 | (manual testing) | (validation queries) | US-11, US-12 |
 | US-15 | src/api/brothers.js | getBrothers(), createBrother(), ... | US-01, US-02, US-11 |
 | US-16 | src/api/carts.js | getCarts(), createCart(), ... | US-01, US-02, US-11 |
 | US-17 | src/api/locations.js | getLocations(), createLocation(), ... | US-01, US-02, US-11 |
@@ -1522,6 +1768,11 @@ Feature: Auditoria de código morto
 | US-31 | src/pages/Settings.jsx | congregation_name update | US-22, US-23 |
 | US-32 | src/api/export.js | exportAllData() | US-15-22 |
 | US-33 | src/api/import.js | importDataFromJSON() | US-15-22, US-32 |
+| US-37 | supabase/migrations/*.sql | CREATE TABLE user_profiles + trigger | US-13 |
+| US-38 | src/pages/Admin/Users.jsx | getPendingUsers(), approveUser(), blockUser() | US-37, US-15 |
+| US-39 | src/components/AdminOnly.jsx | useRoleCheck(), renderização condicional | US-37, US-38 |
+| US-40 | src/store/useAuthStore.js | userProfile state, setUserProfile() | US-37, US-39 |
+| US-41 | src/api/userProfiles.js | updateUserApprovalStatus(), updateUserRole() | US-37, US-04 |
 | US-34 | src/db/, vite.config.js | (removal) | EP-04 complete |
 | US-35 | src/ (global) | (removal of localStorage refs) | US-22, US-31 |
 | US-36 | (audit) | (grep verification) | US-34, US-35 |
@@ -1530,11 +1781,13 @@ Feature: Auditoria de código morto
 
 ## Conclusão
 
-**33 User Stories** estruturadas em **8 Épicos**, tecnicamente precisas e prontas para desenvolvimento. Cada story tem:
+**39 User Stories** estruturadas em **9 Épicos**, tecnicamente precisas e prontas para desenvolvimento. Cada story tem:
 
 - ✅ Critérios de aceite em Gherkin português
 - ✅ Notas técnicas com arquivos/funções concretas
 - ✅ Dependências explícitas
 - ✅ Rastreabilidade completa
+
+**Nota**: Controle de acesso é feito via **RBAC (Role-Based Access Control)** na aplicação (EP-09), não via RLS (Row Level Security) no banco.
 
 **Pronto para entrega a agente de desenvolvimento.**

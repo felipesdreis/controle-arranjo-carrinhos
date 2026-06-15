@@ -14,13 +14,14 @@ function extractUser(supabaseUser) {
 }
 
 /**
- * Store de autenticação — completamente separado do useAppStore (SQLite/OPFS).
+ * Store de autenticação — separado do useAppStore.
  *
  * Estado:
- *   session   — objeto de sessão Supabase ou null
- *   user      — { id, email } ou null
- *   authReady — false até o getSession inicial resolver (evita flash de redirect)
- *   authError — mensagem de erro de configuração ou null
+ *   session     — objeto de sessão Supabase ou null
+ *   user        — { id, email } ou null
+ *   userProfile — { id, user_id, role, is_approved, created_at, updated_at } ou null
+ *   authReady   — false até o getSession inicial resolver (evita flash de redirect)
+ *   authError   — mensagem de erro de configuração ou null
  *
  * Contrato com o Agente B (telas de Auth):
  *   signIn(email, password)  → Promise<{ ok: boolean, error?: string }>
@@ -31,6 +32,7 @@ function extractUser(supabaseUser) {
 const useAuthStore = create((set, get) => ({
   session: null,
   user: null,
+  userProfile: null,
   authReady: false,
   authError: null,
 
@@ -54,17 +56,37 @@ const useAuthStore = create((set, get) => ({
 
     // Restaura sessão persistida (cookie/localStorage gerenciado pelo Supabase)
     const { data: { session } } = await client.auth.getSession()
+    let userProfile = null
+    if (session?.user) {
+      const { data } = await client
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single()
+      userProfile = data ?? null
+    }
     set({
       session,
       user: extractUser(session?.user ?? null),
+      userProfile,
       authReady: true,
     })
 
     // Mantém o store sincronizado com eventos de auth (refresh de token, logout em outra aba, etc.)
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange(async (_event, newSession) => {
+      let newUserProfile = null
+      if (newSession?.user) {
+        const { data } = await client
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', newSession.user.id)
+          .single()
+        newUserProfile = data ?? null
+      }
       set({
         session: newSession,
         user: extractUser(newSession?.user ?? null),
+        userProfile: newUserProfile,
       })
     })
 
@@ -104,7 +126,7 @@ const useAuthStore = create((set, get) => ({
    */
   signOut: async () => {
     // Limpa estado antes da chamada de rede — UX imediata sem esperar resposta
-    set({ session: null, user: null })
+    set({ session: null, user: null, userProfile: null })
     await signOutApi()
   },
 }))

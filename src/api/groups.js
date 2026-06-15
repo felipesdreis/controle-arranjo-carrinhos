@@ -3,11 +3,12 @@ import { getSupabaseClient } from './client'
 export async function getGroups() {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('groups')
     .select('*')
-    .eq('user_id', user.id)
     .eq('active', true)
     .order('name')
   if (error) throw error
@@ -17,7 +18,9 @@ export async function getGroups() {
 export async function createGroup(name, responsibleId = null) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('groups')
     .insert([{ name, user_id: user.id, responsible_id: responsibleId ?? null }])
@@ -29,7 +32,9 @@ export async function createGroup(name, responsibleId = null) {
 export async function updateGroup(id, name, responsibleId = null) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('groups')
     .update({ name, responsible_id: responsibleId ?? null })
@@ -43,7 +48,9 @@ export async function updateGroup(id, name, responsibleId = null) {
 export async function deleteGroup(id) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { error } = await supabase
     .from('groups')
     .delete()

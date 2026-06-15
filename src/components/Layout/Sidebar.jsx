@@ -7,7 +7,9 @@ import {
   Calendar,
   FileText,
   Settings,
+  Shield,
 } from 'lucide-react'
+import AdminOnly from '../AdminOnly'
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', Icon: Home },
@@ -52,7 +54,22 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="px-3 py-4 border-t border-slate-700">
+      <div className="px-3 py-4 border-t border-slate-700 space-y-1">
+        <AdminOnly>
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+              }`
+            }
+          >
+            <Shield size={18} />
+            Administração
+          </NavLink>
+        </AdminOnly>
         <NavLink
           to="/settings"
           className={({ isActive }) =>

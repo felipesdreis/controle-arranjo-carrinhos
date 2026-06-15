@@ -3,17 +3,9 @@ import { ChevronLeft, ChevronRight, Zap, FileText, Settings, Pencil, Trash2, Plu
 import { format, addWeeks, subWeeks, addDays } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import useAppStore from '../store/useAppStore'
-import {
-  getWeek,
-  getOrCreateWeek,
-  getActiveSlotsWithLocations,
-  listAssignmentsByWeek,
-  setAssignment,
-  clearWeekAssignments,
-  getLatestWeekBefore,
-  copyWeekAssignments,
-} from '../db/queries/assignments'
-import { createSlot, updateSlot, deleteSlot } from '../db/queries/slots'
+import { getSlotsWithDetails, createSlot as createSlotApi, updateSlot as updateSlotApi, deleteSlot as deleteSlotApi } from '../api/slots'
+import { getAssignmentsByWeek, upsertAssignment, deleteAssignmentsByWeek } from '../api/assignments'
+import { getScheduleWeeks, createScheduleWeek } from '../api/scheduleWeeks'
 
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0]
@@ -121,12 +113,13 @@ function groupSlotsByLocation(slots) {
 }
 
 export default function Schedule() {
-  const { db, persist, brothers, carts, locations } = useAppStore()
+  const { brothers, carts, locations } = useAppStore()
   const navigate = useNavigate()
   const activeBrothers = brothers.filter((b) => b.active)
   const activeCarts = carts.filter((c) => c.active)
   const activeLocations = locations.filter((l) => l.active)
 
+  const [allWeeks, setAllWeeks] = useState([])
   const [monday, setMonday] = useState(getThisMonday)
   const [week, setWeek] = useState(null)
   const [slots, setSlots] = useState([])
@@ -145,27 +138,38 @@ export default function Schedule() {
   const weekStart = format(monday, 'yyyy-MM-dd')
   const weekLabel = `${format(monday, 'dd/MM')} a ${format(addDays(monday, 6), 'dd/MM/yyyy')}`
 
-  const reloadSlots = useCallback(() => {
-    setSlots(getActiveSlotsWithLocations(db))
-  }, [db])
+  const reloadSlots = useCallback(async () => {
+    const data = await getSlotsWithDetails()
+    setSlots(data)
+  }, [])
 
-  const loadData = useCallback(
-    (weekId) => {
-      const allSlots = getActiveSlotsWithLocations(db)
-      const rawAssignments = listAssignmentsByWeek(db, weekId)
-      const map = {}
-      for (const a of rawAssignments) {
-        map[`${a.slot_id}-${a.position}`] = a.brother_id
-      }
-      setSlots(allSlots)
-      setAssignments(map)
-    },
-    [db]
-  )
+  const loadData = useCallback(async (weekId) => {
+    const [allSlots, rawAssignments] = await Promise.all([
+      getSlotsWithDetails(),
+      getAssignmentsByWeek(weekId),
+    ])
+    const map = {}
+    for (const a of rawAssignments) {
+      map[`${a.slot_id}-${a.position}`] = a.brother_id
+    }
+    setSlots(allSlots)
+    setAssignments(map)
+  }, [])
 
+  // Inicialização: buscar semanas e slots ao montar
   useEffect(() => {
-    if (!db) return
-    const existing = getWeek(db, weekStart)
+    async function init() {
+      const weeks = await getScheduleWeeks()
+      setAllWeeks(weeks)
+    }
+    init()
+    reloadSlots()
+  }, [reloadSlots])
+
+  // Reage à troca de semana ou atualização de allWeeks
+  useEffect(() => {
+    if (allWeeks.length === 0) return
+    const existing = allWeeks.find(w => w.week_start === weekStart) ?? null
     if (existing) {
       setWeek(existing)
       setShowPrompt(false)
@@ -175,15 +179,22 @@ export default function Schedule() {
       setWeek(null)
       setSlots([])
       setAssignments({})
-      setPrevWeek(getLatestWeekBefore(db, weekStart))
+      const prev = allWeeks
+        .filter(w => w.week_start < weekStart)
+        .sort((a, b) => b.week_start.localeCompare(a.week_start))[0] ?? null
+      setPrevWeek(prev)
       setShowPrompt(true)
     }
-  }, [db, weekStart, loadData])
+  }, [allWeeks, weekStart, loadData])
 
   async function handleCreateWeek(copyFrom = null) {
-    const newWeek = await getOrCreateWeek(db, persist, weekStart)
+    const newWeek = await createScheduleWeek(weekStart)
+    setAllWeeks(prev => [...prev, newWeek])
     if (copyFrom) {
-      await copyWeekAssignments(db, persist, copyFrom.id, newWeek.id)
+      const oldAssignments = await getAssignmentsByWeek(copyFrom.id)
+      await Promise.all(oldAssignments.map(a =>
+        upsertAssignment(newWeek.id, a.slot_id, a.position, a.brother_id)
+      ))
     }
     setWeek(newWeek)
     setShowPrompt(false)
@@ -192,9 +203,9 @@ export default function Schedule() {
   }
 
   async function handleAssign(slotId, position, brotherId) {
-    const bId = brotherId ? Number(brotherId) : null
+    const bId = brotherId || null
     setAssignments((prev) => ({ ...prev, [`${slotId}-${position}`]: bId }))
-    await setAssignment(db, persist, week.id, slotId, position, bId)
+    await upsertAssignment(week.id, slotId, position, bId)
   }
 
   async function handleAutoFill() {
@@ -202,8 +213,10 @@ export default function Schedule() {
     const ops = []
     for (const [key, bId] of Object.entries(filled)) {
       if (assignments[key] === bId) continue
-      const [slotId, pos] = key.split('-').map(Number)
-      ops.push(setAssignment(db, persist, week.id, slotId, pos, bId))
+      const parts = key.split('-')
+      const pos = Number(parts[parts.length - 1])
+      const slotId = parts.slice(0, -1).join('-')
+      ops.push(upsertAssignment(week.id, slotId, pos, bId))
     }
     setAssignments(filled)
     await Promise.all(ops)
@@ -211,7 +224,7 @@ export default function Schedule() {
 
   async function handleClearAll() {
     if (!week) return
-    await clearWeekAssignments(db, persist, week.id)
+    await deleteAssignmentsByWeek(week.id)
     setAssignments({})
   }
 
@@ -243,9 +256,9 @@ export default function Schedule() {
     setShowSlotForm(true)
   }
 
-  function handleDeleteSlot(slot) {
+  async function handleDeleteSlot(slot) {
     if (!window.confirm(`Excluir turno ${DAY_LABELS[slot.day_of_week]} ${slot.start_time}–${slot.end_time} em ${slot.location_name}?`)) return
-    deleteSlot(db, persist, slot.id)
+    await deleteSlotApi(slot.id)
     reloadSlots()
   }
 
@@ -257,28 +270,29 @@ export default function Schedule() {
     if (!capacity || Number(capacity) < 1) { setSlotFormError('Capacidade mínima é 1.'); return }
 
     const payload = {
-      location_id: Number(location_id),
+      location_id,
       day_of_week: Number(day_of_week),
       start_time,
       end_time,
-      cart_id: slotForm.cart_id ? Number(slotForm.cart_id) : null,
+      cart_id: slotForm.cart_id || null,
       capacity: Number(capacity),
     }
 
-    let slotId
+    let savedSlot
     if (editingSlot) {
-      updateSlot(db, persist, editingSlot.id, payload)
-      slotId = editingSlot.id
+      savedSlot = await updateSlotApi(editingSlot.id, payload)
     } else {
-      slotId = createSlot(db, persist, payload)
+      savedSlot = await createSlotApi(payload)
     }
 
-    if (week) {
+    const slotId = savedSlot?.id ?? editingSlot?.id
+
+    if (week && slotId) {
       const cap = Number(capacity)
       const ops = []
       for (let pos = 1; pos <= cap; pos++) {
-        const bId = slotBrothers[pos - 1] ? Number(slotBrothers[pos - 1]) : null
-        ops.push(setAssignment(db, persist, week.id, slotId, pos, bId))
+        const bId = slotBrothers[pos - 1] || null
+        ops.push(upsertAssignment(week.id, slotId, pos, bId))
       }
       await Promise.all(ops)
       loadData(week.id)

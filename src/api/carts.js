@@ -3,11 +3,12 @@ import { getSupabaseClient } from './client'
 export async function getCarts() {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('carts')
     .select('*')
-    .eq('user_id', user.id)
     .eq('active', true)
     .order('name')
   if (error) throw error
@@ -17,7 +18,9 @@ export async function getCarts() {
 export async function createCart(name) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('carts')
     .insert([{ name, user_id: user.id }])
@@ -29,7 +32,9 @@ export async function createCart(name) {
 export async function updateCart(id, name) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { data, error } = await supabase
     .from('carts')
     .update({ name })
@@ -43,7 +48,9 @@ export async function updateCart(id, name) {
 export async function deleteCart(id) {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase not configured')
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
   const { error } = await supabase
     .from('carts')
     .delete()

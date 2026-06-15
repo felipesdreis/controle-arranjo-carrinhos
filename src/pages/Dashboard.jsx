@@ -24,28 +24,17 @@ function StatCard({ icon: Icon, value, label, color, onClick }) {
 }
 
 export default function Dashboard() {
-  const { brothers, carts, locations, db } = useAppStore()
+  const store = useAppStore()
+  const { brothers, carts, locations, slots, scheduleWeeks, loading, error } = store
   const navigate = useNavigate()
 
-  const activeBrothers  = brothers.filter((b) => b.active).length
-  const activeCarts     = carts.filter((c) => c.active).length
-  const activeLocations = locations.filter((l) => l.active).length
+  if (loading) return <div className="p-8 text-slate-500">Carregando...</div>
 
-  let activeSlots = 0
-  if (db) {
-    try {
-      const res = db.exec('SELECT COUNT(*) FROM slots WHERE active = 1')
-      activeSlots = res[0]?.values[0][0] ?? 0
-    } catch (_) {}
-  }
-
-  let scheduledWeeks = 0
-  if (db) {
-    try {
-      const res = db.exec('SELECT COUNT(*) FROM schedule_weeks')
-      scheduledWeeks = res[0]?.values[0][0] ?? 0
-    } catch (_) {}
-  }
+  const activeBrothers  = brothers.length
+  const activeCarts     = carts.length
+  const activeLocations = locations.length
+  const activeSlots     = slots.length
+  const scheduledWeeks  = scheduleWeeks.length
 
   const cards = [
     {
@@ -87,6 +76,12 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {error && (
+        <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Cards de resumo */}
       <div className="grid grid-cols-2 gap-4 mb-8 lg:grid-cols-4">
         {cards.map((card) => (
@@ -124,7 +119,7 @@ export default function Dashboard() {
       {/* Info de semanas */}
       {scheduledWeeks > 0 && (
         <p className="text-xs text-slate-400 mt-6 text-center">
-          {scheduledWeeks} semana{scheduledWeeks !== 1 ? 's' : ''} com programação registrada no banco local
+          {scheduledWeeks} semana{scheduledWeeks !== 1 ? 's' : ''} com programação registrada
         </p>
       )}
     </div>

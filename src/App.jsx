@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import useAppStore from './store/useAppStore'
 import useAuthStore from './store/useAuthStore'
+import { useRoleCheck } from './hooks/useRoleCheck'
 import { validateSupabaseConfig } from './api/client'
 import Sidebar from './components/Layout/Sidebar'
 import Header from './components/Layout/Header'
@@ -14,6 +15,26 @@ import Locations from './pages/Locations'
 import Schedule from './pages/Schedule'
 import Report from './pages/Report'
 import Settings from './pages/Settings'
+import AdminUsersPage from './pages/Admin/Users'
+
+/**
+ * Guard de role: redireciona para /report se o usuário aprovado não tiver role suficiente.
+ * Usuários com role='user' não podem acessar rotas de edição.
+ */
+function RoleRoute({ children }) {
+  const hasAccess = useRoleCheck('admin')
+  if (!hasAccess) return <Navigate to="/report" replace />
+  return children
+}
+
+/**
+ * Guard de role admin: redireciona para /dashboard se o usuário não for admin aprovado.
+ */
+function AdminRoute({ children }) {
+  const isAdmin = useRoleCheck('admin')
+  if (!isAdmin) return <Navigate to="/dashboard" replace />
+  return children
+}
 
 function AppLayout() {
   return (
@@ -25,12 +46,13 @@ function AppLayout() {
           <Routes>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/brothers" element={<Brothers />} />
-            <Route path="/carts" element={<Carts />} />
-            <Route path="/locations" element={<Locations />} />
-            <Route path="/schedule" element={<Schedule />} />
+            <Route path="/brothers" element={<RoleRoute><Brothers /></RoleRoute>} />
+            <Route path="/carts" element={<RoleRoute><Carts /></RoleRoute>} />
+            <Route path="/locations" element={<RoleRoute><Locations /></RoleRoute>} />
+            <Route path="/schedule" element={<RoleRoute><Schedule /></RoleRoute>} />
             <Route path="/report" element={<Report />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<RoleRoute><Settings /></RoleRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
           </Routes>
         </main>
       </div>
@@ -43,7 +65,7 @@ function LoadingScreen() {
     <div className="flex items-center justify-center h-screen bg-gray-100">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-700 mx-auto mb-4" />
-        <p className="text-slate-600 text-sm">Iniciando banco de dados...</p>
+        <p className="text-slate-600 text-sm">Carregando dados...</p>
       </div>
     </div>
   )
@@ -61,14 +83,9 @@ function ErrorScreen({ message }) {
 }
 
 export default function App() {
-  const { loading, error, initDB } = useAppStore()
-  const { user, authReady, initAuth } = useAuthStore()
+  const { loading, error, initializeData } = useAppStore()
+  const { user, userProfile, authReady, initAuth } = useAuthStore()
 
-  useEffect(() => {
-    initDB()
-  }, [])
-
-  // Validação Supabase não-bloqueante — não interfere no fluxo do initDB/OPFS
   useEffect(() => {
     validateSupabaseConfig()
   }, [])
@@ -80,8 +97,46 @@ export default function App() {
     return () => unsubscribe()
   }, [])
 
+  // Carrega dados somente quando o usuário estiver autenticado
+  useEffect(() => {
+    if (user) {
+      initializeData()
+    }
+  }, [user?.id])
+
   if (loading) return <LoadingScreen />
   if (error) return <ErrorScreen message={error} />
+
+  // Usuário autenticado mas não aprovado: redireciona para /auth
+  // (o authReady garante que o userProfile já foi carregado antes de avaliar)
+  if (authReady && user && userProfile && !userProfile.is_approved) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="*"
+            element={
+              <div className="flex items-center justify-center h-screen bg-gray-100">
+                <div className="text-center bg-white rounded-lg p-8 shadow max-w-md">
+                  <p className="text-slate-700 font-medium mb-2">Aguardando aprovação</p>
+                  <p className="text-slate-500 text-sm mb-4">
+                    Sua conta foi criada e está aguardando aprovação de um administrador.
+                    Entre em contato com o responsável pelo sistema.
+                  </p>
+                  <button
+                    onClick={() => useAuthStore.getState().signOut()}
+                    className="text-sm text-slate-500 underline hover:text-slate-700"
+                  >
+                    Sair
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    )
+  }
 
   return (
     <BrowserRouter>

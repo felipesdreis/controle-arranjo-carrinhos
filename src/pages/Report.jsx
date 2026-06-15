@@ -2,11 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Download, Printer } from 'lucide-react'
 import { format, addWeeks, subWeeks, addDays } from 'date-fns'
 import useAppStore from '../store/useAppStore'
-import {
-  getWeek,
-  getActiveSlotsWithLocations,
-  listAssignmentsByWeek,
-} from '../db/queries/assignments'
+import { getSlotsWithDetails } from '../api/slots'
+import { getAssignmentsByWeek } from '../api/assignments'
 
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const REPORT_DAYS = [1, 2, 3, 4, 5, 6, 0]
@@ -75,37 +72,47 @@ function buildReportGridByCart(slots, rawAssignments, brothers) {
 }
 
 export default function Report() {
-  const { db, brothers } = useAppStore()
+  const { brothers, scheduleWeeks, congregationName } = useAppStore()
   const reportRef = useRef(null)
 
   const [monday, setMonday] = useState(getThisMonday)
   const [week, setWeek] = useState(null)
   const [grid, setGrid] = useState([])
+  const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [congregationName] = useState(
-    () => localStorage.getItem('congregationName') || 'Congregação'
-  )
 
   const weekStart = format(monday, 'yyyy-MM-dd')
   const weekEnd   = format(addDays(monday, 6), 'dd/MM/yyyy')
   const weekLabel = `${format(monday, 'dd/MM')} a ${weekEnd}`
 
   const loadData = useCallback(
-    (w) => {
-      const slots = getActiveSlotsWithLocations(db)
-      const rawAssignments = listAssignmentsByWeek(db, w.id)
-      setGrid(buildReportGridByCart(slots, rawAssignments, brothers))
+    async (w) => {
+      setLoading(true)
+      try {
+        const [slots, rawAssignments] = await Promise.all([
+          getSlotsWithDetails(),
+          getAssignmentsByWeek(w.id),
+        ])
+        setGrid(buildReportGridByCart(slots, rawAssignments, brothers))
+      } catch (err) {
+        console.error('Erro ao carregar relatório:', err)
+        setGrid([])
+      } finally {
+        setLoading(false)
+      }
     },
-    [db, brothers]
+    [brothers]
   )
 
   useEffect(() => {
-    if (!db) return
-    const existing = getWeek(db, weekStart)
+    const existing = scheduleWeeks.find((w) => w.week_start === weekStart) ?? null
     setWeek(existing)
-    if (existing) loadData(existing)
-    else setGrid([])
-  }, [db, weekStart, loadData])
+    if (existing) {
+      loadData(existing)
+    } else {
+      setGrid([])
+    }
+  }, [scheduleWeeks, weekStart, loadData])
 
   async function handleExportPDF() {
     if (!reportRef.current) return
@@ -174,7 +181,11 @@ export default function Report() {
 
       {/* Área de conteúdo */}
       <div className="flex-1 overflow-auto bg-gray-100 p-6 print:p-0 print:bg-white">
-        {!week ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-slate-500 text-sm">Carregando...</p>
+          </div>
+        ) : !week ? (
           <div className="flex items-center justify-center h-full">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center max-w-sm">
               <p className="font-semibold text-slate-800 mb-1">Semana sem programação</p>

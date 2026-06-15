@@ -1,11 +1,16 @@
-import { useState } from 'react'
-import { Plus, Pencil, ToggleLeft, ToggleRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import Modal from '../components/ui/Modal'
 
 export default function Carts() {
-  const { carts, saveCart, updateCart, toggleCartActive } = useAppStore()
+  const store = useAppStore()
+  const { carts, loading, error } = store
   const [modal, setModal] = useState(null) // null | { mode: 'create' | 'edit', data?: cart }
+
+  useEffect(() => {
+    if (!carts.length) store.fetchCarts()
+  }, [])
 
   function openCreate() {
     setModal({ mode: 'create' })
@@ -19,14 +24,22 @@ export default function Carts() {
     setModal(null)
   }
 
-  function handleSubmit(data) {
+  async function handleSubmit(data) {
     if (modal.mode === 'create') {
-      saveCart(data)
+      await store.createCart(data.name)
     } else {
-      updateCart(modal.data.id, data)
+      await store.updateCart(modal.data.id, data.name)
     }
     closeModal()
   }
+
+  async function handleDelete(cart) {
+    if (window.confirm(`Excluir "${cart.name}"? Esta ação não pode ser desfeita.`)) {
+      await store.deleteCart(cart.id)
+    }
+  }
+
+  if (loading) return <div className="p-8 text-slate-500">Carregando...</div>
 
   return (
     <div className="flex flex-col h-full">
@@ -40,6 +53,12 @@ export default function Carts() {
           Novo Carrinho
         </button>
       </div>
+
+      {error && (
+        <div className="mx-8 mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto px-8 py-6">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -64,7 +83,7 @@ export default function Carts() {
                 <tr
                   key={cart.id}
                   className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                    cart.active === 0 ? 'opacity-50' : ''
+                    !cart.active ? 'opacity-50' : ''
                   }`}
                 >
                   <td className="px-4 py-3 font-medium text-slate-800">{cart.name}</td>
@@ -72,7 +91,7 @@ export default function Carts() {
                     {cart.description ?? '—'}
                   </td>
                   <td className="px-4 py-3">
-                    {cart.active === 1 ? (
+                    {cart.active === true ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                         Ativo
                       </span>
@@ -92,15 +111,11 @@ export default function Carts() {
                         <Pencil size={15} />
                       </button>
                       <button
-                        onClick={() => toggleCartActive(cart.id)}
-                        title={cart.active === 1 ? 'Desativar' : 'Ativar'}
-                        className={`p-1.5 rounded-md transition-colors ${
-                          cart.active === 1
-                            ? 'text-green-600 hover:bg-green-50'
-                            : 'text-gray-400 hover:bg-gray-100'
-                        }`}
+                        onClick={() => handleDelete(cart)}
+                        title="Excluir"
+                        className="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       >
-                        {cart.active === 1 ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </td>

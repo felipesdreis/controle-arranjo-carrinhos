@@ -1,12 +1,17 @@
-import { useState } from 'react'
-import { Search, Plus, Pencil, ToggleLeft, ToggleRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import Modal from '../components/ui/Modal'
 
 export default function Brothers() {
-  const { brothers, saveBrother, updateBrother, toggleBrotherActive } = useAppStore()
+  const store = useAppStore()
+  const { brothers, loading, error } = store
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null) // null | { mode: 'create' | 'edit', data?: brother }
+
+  useEffect(() => {
+    if (!brothers.length) store.fetchBrothers()
+  }, [])
 
   const filtered = brothers.filter((b) =>
     b.name.toLowerCase().includes(search.toLowerCase())
@@ -24,14 +29,22 @@ export default function Brothers() {
     setModal(null)
   }
 
-  function handleSubmit(data) {
+  async function handleSubmit(data) {
     if (modal.mode === 'create') {
-      saveBrother(data)
+      await store.createBrother(data)
     } else {
-      updateBrother(modal.data.id, data)
+      await store.updateBrother(modal.data.id, data)
     }
     closeModal()
   }
+
+  async function handleDelete(brother) {
+    if (window.confirm(`Excluir "${brother.name}"? Esta ação não pode ser desfeita.`)) {
+      await store.deleteBrother(brother.id)
+    }
+  }
+
+  if (loading) return <div className="p-8 text-slate-500">Carregando...</div>
 
   return (
     <div className="flex flex-col h-full">
@@ -59,6 +72,12 @@ export default function Brothers() {
         </div>
       </div>
 
+      {error && (
+        <div className="mx-8 mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="flex-1 overflow-auto px-8 py-6">
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-sm">
@@ -83,7 +102,7 @@ export default function Brothers() {
                 <tr
                   key={brother.id}
                   className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                    brother.active === 0 ? 'opacity-50' : ''
+                    !brother.active ? 'opacity-50' : ''
                   }`}
                 >
                   <td className="px-4 py-3 font-medium text-slate-800">{brother.name}</td>
@@ -92,7 +111,7 @@ export default function Brothers() {
                     {brother.notes ?? '—'}
                   </td>
                   <td className="px-4 py-3">
-                    {brother.active === 1 ? (
+                    {brother.active === true ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                         Ativo
                       </span>
@@ -112,15 +131,11 @@ export default function Brothers() {
                         <Pencil size={15} />
                       </button>
                       <button
-                        onClick={() => toggleBrotherActive(brother.id)}
-                        title={brother.active === 1 ? 'Desativar' : 'Ativar'}
-                        className={`p-1.5 rounded-md transition-colors ${
-                          brother.active === 1
-                            ? 'text-green-600 hover:bg-green-50'
-                            : 'text-gray-400 hover:bg-gray-100'
-                        }`}
+                        onClick={() => handleDelete(brother)}
+                        title="Excluir"
+                        className="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                       >
-                        {brother.active === 1 ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </td>

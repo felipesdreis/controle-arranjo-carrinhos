@@ -1,8 +1,7 @@
-import { useState, Fragment } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { ChevronDown, ChevronUp, Pencil, Trash2, Plus } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import Modal from '../components/ui/Modal'
-import { listSlotsByLocation, createSlot, updateSlot, deleteSlot } from '../db/queries/slots'
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -203,35 +202,37 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
   )
 }
 
-function SlotsPanel({ locationId, db, persist, activeCarts }) {
-  const [slots, setSlots] = useState(() => listSlotsByLocation(db, locationId))
+function SlotsPanel({ locationId, activeCarts }) {
+  const store = useAppStore()
+  const slots = store.slots
+    .filter((s) => s.location_id === locationId)
+    .map((s) => ({
+      ...s,
+      cart_name: store.carts.find((c) => c.id === s.cart_id)?.name ?? null,
+    }))
   const [slotModal, setSlotModal] = useState(null) // null | 'new' | { slot }
 
-  function refreshSlots() {
-    setSlots(listSlotsByLocation(db, locationId))
-  }
-
-  function handleSaveSlot(form) {
+  async function handleSaveSlot(form) {
     const payload = {
       location_id: locationId,
-      cart_id: form.cart_id ? Number(form.cart_id) : null,
+      cart_id: form.cart_id || null,
       day_of_week: form.day_of_week,
       start_time: form.start_time,
       end_time: form.end_time,
       capacity: form.capacity,
     }
     if (slotModal === 'new') {
-      createSlot(db, persist, payload)
+      await store.createSlot(payload)
     } else {
-      updateSlot(db, persist, slotModal.slot.id, payload)
+      await store.updateSlot(slotModal.slot.id, payload)
     }
-    refreshSlots()
     setSlotModal(null)
   }
 
-  function handleDeleteSlot(id) {
-    deleteSlot(db, persist, id)
-    refreshSlots()
+  async function handleDeleteSlot(slot) {
+    if (window.confirm(`Excluir turno ${DAYS[slot.day_of_week]} ${slot.start_time}–${slot.end_time}?`)) {
+      await store.deleteSlot(slot.id)
+    }
   }
 
   const editingSlot = slotModal && slotModal !== 'new' ? slotModal.slot : null
@@ -292,7 +293,7 @@ function SlotsPanel({ locationId, db, persist, activeCarts }) {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => handleDeleteSlot(slot.id)}
+                      onClick={() => handleDeleteSlot(slot)}
                       className="text-red-400 hover:text-red-600 transition-colors"
                       title="Excluir turno"
                     >
@@ -326,30 +327,45 @@ function SlotsPanel({ locationId, db, persist, activeCarts }) {
 }
 
 export default function Locations() {
-  const { locations, db, persist, carts, saveLocation, updateLocation, toggleLocationActive } = useAppStore()
+  const store = useAppStore()
+  const { locations, carts, loading, error } = store
 
   const [expandedId, setExpandedId] = useState(null)
   const [locationModal, setLocationModal] = useState(null) // null | 'new' | { location }
 
-  const activeCarts = carts.filter((c) => c.active)
+  useEffect(() => {
+    if (!locations.length) store.fetchLocations()
+    if (!carts.length) store.fetchCarts()
+    store.fetchSlots()
+  }, [])
+
+  const activeCarts = carts.filter((c) => c.active === true)
 
   function toggleExpand(locationId) {
     setExpandedId((prev) => (prev === locationId ? null : locationId))
   }
 
-  function handleSaveLocation(form) {
+  async function handleSaveLocation(form) {
     if (locationModal === 'new') {
-      saveLocation(form)
+      await store.createLocation(form.name)
     } else {
-      updateLocation(locationModal.location.id, form)
+      await store.updateLocation(locationModal.location.id, form.name)
     }
     setLocationModal(null)
+  }
+
+  async function handleDeleteLocation(loc) {
+    if (window.confirm(`Excluir "${loc.name}"? Esta ação não pode ser desfeita.`)) {
+      await store.deleteLocation(loc.id)
+    }
   }
 
   const editingLocation = locationModal && locationModal !== 'new' ? locationModal.location : null
   const locationFormInitial = editingLocation
     ? { name: editingLocation.name, address: editingLocation.address ?? '', notes: editingLocation.notes ?? '' }
     : EMPTY_LOCATION_FORM
+
+  if (loading) return <div className="p-8 text-slate-500">Carregando...</div>
 
   return (
     <div className="p-6">
@@ -363,6 +379,12 @@ export default function Locations() {
           Novo Local
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full">
@@ -390,7 +412,7 @@ export default function Locations() {
                   <td className="px-6 py-3 font-medium text-slate-800">{loc.name}</td>
                   <td className="px-6 py-3 text-slate-500 text-sm">{loc.address || '—'}</td>
                   <td className="px-6 py-3">
-                    <Badge active={loc.active} />
+                    <Badge active={loc.active === true} />
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-end gap-2">
@@ -409,15 +431,11 @@ export default function Locations() {
                         <Pencil size={15} />
                       </button>
                       <button
-                        onClick={() => toggleLocationActive(loc.id)}
-                        className={`text-xs px-2 py-1 rounded border transition-colors ${
-                          loc.active
-                            ? 'border-red-200 text-red-500 hover:bg-red-50'
-                            : 'border-green-200 text-green-600 hover:bg-green-50'
-                        }`}
-                        title={loc.active ? 'Desativar' : 'Ativar'}
+                        onClick={() => handleDeleteLocation(loc)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                        title="Excluir local"
                       >
-                        {loc.active ? 'Desativar' : 'Ativar'}
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </td>
@@ -427,8 +445,6 @@ export default function Locations() {
                     <td colSpan={4} className="p-0">
                       <SlotsPanel
                         locationId={loc.id}
-                        db={db}
-                        persist={persist}
                         activeCarts={activeCarts}
                       />
                     </td>

@@ -22,3 +22,12 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Supabase CLI (tokens locais, project refs)
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+.supabase/
+
+# Vercel CLI
+.vercel/
