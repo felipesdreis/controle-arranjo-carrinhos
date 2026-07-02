@@ -93,7 +93,7 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">Dia da semana</label>
           <select
@@ -120,7 +120,7 @@ function SlotForm({ initial, slots, activeCarts, onSave, onClose, editingId }) {
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">Horário início</label>
           <input
@@ -232,6 +232,7 @@ function SlotsPanel({ locationId, activeCarts }) {
       {slots.length === 0 ? (
         <p className="text-sm text-ink/40 italic">Nenhum turno cadastrado.</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs font-medium text-ink/60 border-b border-surface-border">
@@ -275,6 +276,7 @@ function SlotsPanel({ locationId, activeCarts }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {slotModal && (
@@ -355,11 +357,11 @@ export default function Locations() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px]">
+        <table className="w-full">
           <thead>
             <tr className="text-left text-xs font-medium text-ink/70 bg-surface-subtle border-b border-surface-border">
               <th className="px-6 py-3">Nome</th>
-              <th className="px-6 py-3">Endereço</th>
+              <th className="px-6 py-3 hidden md:table-cell">Endereço</th>
               <th className="px-6 py-3">Ativo</th>
               <th className="px-6 py-3 text-right">Ações</th>
             </tr>
@@ -378,7 +380,7 @@ export default function Locations() {
                   className="border-b border-surface-border last:border-0 hover:bg-surface-subtle transition-colors"
                 >
                   <td className="px-6 py-3 font-medium text-ink">{loc.name}</td>
-                  <td className="px-6 py-3 text-ink/60 text-sm">{loc.address || '—'}</td>
+                  <td className="px-6 py-3 text-ink/60 text-sm hidden md:table-cell">{loc.address || '—'}</td>
                   <td className="px-6 py-3">
                     <Badge active={loc.active === true} />
                   </td>

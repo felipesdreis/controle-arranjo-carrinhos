@@ -10,6 +10,11 @@ const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const REPORT_DAYS = [1, 2, 3, 4, 5, 6, 0]
 const DAY_OFFSET  = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }
 
+// Largura virtual usada pelo html2canvas ao capturar para PDF/imagem — garante que a
+// exportação sempre saia em fidelidade desktop, independente da largura real da tela
+// do usuário (ex.: exportar a partir de um celular).
+const EXPORT_VIEWPORT_WIDTH = 1500
+
 function buildReportGridByCart(slots, rawAssignments, brothers) {
   const brotherMap = {}
   for (const b of brothers) brotherMap[b.id] = b.name
@@ -98,7 +103,8 @@ const BrotherCardReport = forwardRef(function BrotherCardReport({ brotherName, r
     <div
       ref={ref}
       style={{
-        width: '400px',
+        width: '100%',
+        maxWidth: 400,
         background: 'white',
         borderRadius: 8,
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -248,7 +254,7 @@ export default function Report() {
           margin: [8, 8, 8, 8],
           filename: `testemunho_${weekStart}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
+          html2canvas: { scale: 2, useCORS: true, windowWidth: EXPORT_VIEWPORT_WIDTH },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
         })
         .from(reportRef.current)
@@ -264,7 +270,7 @@ export default function Report() {
     try {
       const html2pdf = (await import('html2pdf.js')).default
       const worker = html2pdf()
-        .set({ html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' } })
+        .set({ html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: EXPORT_VIEWPORT_WIDTH } })
         .from(cardRef.current)
         .toCanvas()
       await worker
@@ -285,7 +291,7 @@ export default function Report() {
   return (
     <div className="flex flex-col h-full">
       {/* Header da tela */}
-      <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-gray-200 bg-white shrink-0 print:hidden">
+      <div className="flex items-center justify-between flex-wrap gap-3 px-4 md:px-8 py-4 border-b border-gray-200 bg-white shrink-0 print:hidden">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMonday((m) => subWeeks(m, 1))}
@@ -304,7 +310,7 @@ export default function Report() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors"
@@ -328,7 +334,7 @@ export default function Report() {
       </div>
 
       {/* Barra de modo do relatório */}
-      <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-gray-200 bg-white shrink-0 print:hidden">
+      <div className="flex items-center gap-3 flex-wrap gap-y-2 px-4 md:px-8 py-3 border-b border-gray-200 bg-white shrink-0 print:hidden">
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setMode('week')}
@@ -407,8 +413,12 @@ export default function Report() {
           <div
             ref={reportRef}
             data-print-target
-            className="bg-white shadow-md mx-auto print:shadow-none"
-            style={isBrotherCards ? { padding: '24px' } : { width: '277mm', minHeight: '190mm', padding: '10mm' }}
+            className={
+              isBrotherCards
+                ? 'bg-white shadow-md mx-auto print:shadow-none'
+                : 'bg-white shadow-md mx-auto print:shadow-none w-full max-w-[277mm] print:w-[277mm] print:min-h-[190mm]'
+            }
+            style={isBrotherCards ? { padding: '24px' } : { padding: '10mm' }}
           >
             {/* Cabeçalho do relatório */}
             {!isBrotherCards && (

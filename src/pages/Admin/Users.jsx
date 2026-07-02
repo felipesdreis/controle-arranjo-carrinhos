@@ -105,13 +105,13 @@ export default function AdminUsersPage() {
 
         {!loading && !error && users.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface-border bg-surface-subtle">
                   <th className="px-6 py-3 text-left font-medium text-ink/70">E-mail</th>
                   <th className="px-6 py-3 text-left font-medium text-ink/70">Status</th>
                   <th className="px-6 py-3 text-left font-medium text-ink/70">Papel</th>
-                  <th className="px-6 py-3 text-left font-medium text-ink/70">Cadastrado em</th>
+                  <th className="px-6 py-3 text-left font-medium text-ink/70 hidden md:table-cell">Cadastrado em</th>
                   <th className="px-6 py-3 text-right font-medium text-ink/70">Ações</th>
                 </tr>
               </thead>
@@ -148,11 +148,11 @@ export default function AdminUsersPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-ink/60">
+                      <td className="px-6 py-4 text-ink/60 hidden md:table-cell">
                         {formatDate(u.created_at)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
                           {u.is_approved ? (
                             <button
                               disabled={busy}

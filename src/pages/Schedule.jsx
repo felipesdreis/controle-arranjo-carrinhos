@@ -124,6 +124,12 @@ export default function Schedule() {
   const [slotFormError, setSlotFormError] = useState('')
   const [slotBrothers, setSlotBrothers] = useState(['', ''])
 
+  // Seletor de dia único usado na visão mobile da grade semanal
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const todayDow = new Date().getDay()
+    return DISPLAY_DAYS.includes(todayDow) ? todayDow : 1
+  })
+
   const weekStart = format(monday, 'yyyy-MM-dd')
   const weekLabel = `${format(monday, 'dd/MM')} a ${format(addDays(monday, 6), 'dd/MM/yyyy')}`
 
@@ -300,10 +306,50 @@ export default function Schedule() {
   const conflicts = buildConflictSet(slots, assignments)
   const slotGroups = groupSlotsByLocation(slots)
 
+  function renderDaySlots(daySlots) {
+    return (
+      <div className="flex flex-col gap-2">
+        {daySlots.map((slot) => (
+          <div key={slot.id} className="flex flex-col gap-1">
+            {Array.from({ length: slot.capacity }, (_, i) => i + 1).map((pos) => {
+              const key = `${slot.id}-${pos}`
+              const val = assignments[key] ?? ''
+              const isConflict = conflicts.has(key)
+              const isFilled = !!val
+              return (
+                <select
+                  key={pos}
+                  value={val}
+                  onChange={(e) => handleAssign(slot.id, pos, e.target.value)}
+                  className={`w-full rounded-md border px-1 py-1 text-xs focus:outline-none focus:ring-1 transition-colors cursor-pointer ${
+                    isConflict
+                      ? 'border-amber-400 bg-amber-50 text-amber-800 focus:ring-amber-400'
+                      : isFilled
+                      ? 'border-accent-green/40 bg-accent-green-soft text-accent-green focus:ring-accent-green'
+                      : 'border-surface-border bg-surface-subtle text-ink/40 focus:ring-brand'
+                  }`}
+                >
+                  <option value="">— vazio —</option>
+                  {activeBrothers.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              )
+            })}
+            <div className="text-xs text-ink/40 mt-0.5 leading-tight">
+              <span className="block truncate" title={slot.location_name}>{slot.location_name}</span>
+              <span className="font-mono">{slot.start_time}–{slot.end_time}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-surface-border bg-surface-card shrink-0">
+      <div className="flex items-center justify-between flex-wrap gap-y-3 px-4 md:px-8 py-4 border-b border-surface-border bg-surface-card shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMonday((m) => subWeeks(m, 1))}
@@ -407,91 +453,95 @@ export default function Schedule() {
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              {grid.map((cart) => (
-                <Card key={cart.cart_id} className="overflow-x-auto">
-                  <div className="px-4 py-2 border-b border-surface-border bg-surface-subtle">
-                    <h3 className="text-xs font-bold uppercase tracking-wide text-ink/70">
-                      Carrinho: {cart.cart_name}
-                    </h3>
-                  </div>
-                  <table className="w-full min-w-[640px] text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-surface-subtle border-b border-surface-border">
-                        <th className="text-left px-4 py-3 font-medium text-ink/70 w-24 shrink-0">
-                          Período
-                        </th>
-                        {DISPLAY_DAYS.map((d) => {
-                          const date = addDays(monday, DAY_OFFSET[d])
-                          return (
-                            <th key={d} className="px-2 py-3 font-medium text-ink/70 text-center min-w-[120px]">
-                              <div>{DAY_LABELS[d]}</div>
-                              <div className="text-xs text-ink/40 font-normal">{format(date, 'dd/MM')}</div>
+            <>
+              {/* Abas de dia — só em mobile */}
+              <div className="flex gap-1 overflow-x-auto pb-1 mb-4 md:hidden">
+                {DISPLAY_DAYS.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setSelectedDay(d)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      selectedDay === d
+                        ? 'bg-brand text-white'
+                        : 'bg-surface-subtle text-ink/60 hover:bg-surface-border'
+                    }`}
+                  >
+                    {DAY_LABELS[d]}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-6">
+                {grid.map((cart) => (
+                  <Card key={cart.cart_id} className="overflow-hidden">
+                    <div className="px-4 py-2 border-b border-surface-border bg-surface-subtle">
+                      <h3 className="text-xs font-bold uppercase tracking-wide text-ink/70">
+                        Carrinho: {cart.cart_name}
+                      </h3>
+                    </div>
+
+                    {/* Desktop: grade completa da semana */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full min-w-[640px] text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-surface-subtle border-b border-surface-border">
+                            <th className="text-left px-4 py-3 font-medium text-ink/70 w-24 shrink-0">
+                              Período
                             </th>
-                          )
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cart.periods.map((periodObj) => (
-                        <tr key={periodObj.period} className="border-b border-surface-border last:border-0 align-top">
-                          <td className="px-4 py-2 font-medium text-xs text-ink/70 shrink-0 whitespace-nowrap">
-                            {periodObj.period}
-                          </td>
-                          {DISPLAY_DAYS.map((d) => {
-                            const daySlots = periodObj.days[d]
-                            if (!daySlots || daySlots.length === 0) {
+                            {DISPLAY_DAYS.map((d) => {
+                              const date = addDays(monday, DAY_OFFSET[d])
                               return (
-                                <td key={d} className="px-2 py-2 text-center text-ink/20 text-xs">—</td>
+                                <th key={d} className="px-2 py-3 font-medium text-ink/70 text-center min-w-[120px]">
+                                  <div>{DAY_LABELS[d]}</div>
+                                  <div className="text-xs text-ink/40 font-normal">{format(date, 'dd/MM')}</div>
+                                </th>
                               )
-                            }
-                            return (
-                              <td key={d} className="px-2 py-2">
-                                <div className="flex flex-col gap-2">
-                                  {daySlots.map((slot) => (
-                                    <div key={slot.id} className="flex flex-col gap-1">
-                                      {Array.from({ length: slot.capacity }, (_, i) => i + 1).map((pos) => {
-                                        const key = `${slot.id}-${pos}`
-                                        const val = assignments[key] ?? ''
-                                        const isConflict = conflicts.has(key)
-                                        const isFilled = !!val
-                                        return (
-                                          <select
-                                            key={pos}
-                                            value={val}
-                                            onChange={(e) => handleAssign(slot.id, pos, e.target.value)}
-                                            className={`w-full rounded-md border px-1 py-1 text-xs focus:outline-none focus:ring-1 transition-colors cursor-pointer ${
-                                              isConflict
-                                                ? 'border-amber-400 bg-amber-50 text-amber-800 focus:ring-amber-400'
-                                                : isFilled
-                                                ? 'border-accent-green/40 bg-accent-green-soft text-accent-green focus:ring-accent-green'
-                                                : 'border-surface-border bg-surface-subtle text-ink/40 focus:ring-brand'
-                                            }`}
-                                          >
-                                            <option value="">— vazio —</option>
-                                            {activeBrothers.map((b) => (
-                                              <option key={b.id} value={b.id}>{b.name}</option>
-                                            ))}
-                                          </select>
-                                        )
-                                      })}
-                                      <div className="text-xs text-ink/40 mt-0.5 leading-tight">
-                                        <span className="block truncate" title={slot.location_name}>{slot.location_name}</span>
-                                        <span className="font-mono">{slot.start_time}–{slot.end_time}</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cart.periods.map((periodObj) => (
+                            <tr key={periodObj.period} className="border-b border-surface-border last:border-0 align-top">
+                              <td className="px-4 py-2 font-medium text-xs text-ink/70 shrink-0 whitespace-nowrap">
+                                {periodObj.period}
                               </td>
-                            )
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Card>
-              ))}
-            </div>
+                              {DISPLAY_DAYS.map((d) => {
+                                const daySlots = periodObj.days[d]
+                                if (!daySlots || daySlots.length === 0) {
+                                  return (
+                                    <td key={d} className="px-2 py-2 text-center text-ink/20 text-xs">—</td>
+                                  )
+                                }
+                                return (
+                                  <td key={d} className="px-2 py-2">
+                                    {renderDaySlots(daySlots)}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile: um dia por vez */}
+                    <div className="md:hidden divide-y divide-surface-border">
+                      {cart.periods.map((periodObj) => {
+                        const daySlots = periodObj.days[selectedDay]
+                        return (
+                          <div key={periodObj.period} className="px-4 py-3">
+                            <div className="text-xs font-medium text-ink/70 mb-2">{periodObj.period}</div>
+                            {daySlots && daySlots.length > 0
+                              ? renderDaySlots(daySlots)
+                              : <p className="text-xs text-ink/20">—</p>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -537,7 +587,7 @@ export default function Schedule() {
                   <h3 className="text-sm font-semibold text-ink mb-3">
                     {editingSlot ? 'Editar Turno' : 'Novo Turno'}
                   </h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-ink/70 mb-1">Local</label>
                       <select

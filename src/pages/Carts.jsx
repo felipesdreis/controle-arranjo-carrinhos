@@ -63,11 +63,11 @@ export default function Carts() {
       <div className="flex-1 overflow-auto px-4 md:px-8 py-6">
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-subtle border-b border-surface-border">
                 <th className="text-left px-4 py-3 font-medium text-ink/70">Nome</th>
-                <th className="text-left px-4 py-3 font-medium text-ink/70">Descrição</th>
+                <th className="text-left px-4 py-3 font-medium text-ink/70 hidden md:table-cell">Descrição</th>
                 <th className="text-left px-4 py-3 font-medium text-ink/70">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-ink/70">Ações</th>
               </tr>
@@ -88,7 +88,7 @@ export default function Carts() {
                   }`}
                 >
                   <td className="px-4 py-3 font-medium text-ink">{cart.name}</td>
-                  <td className="px-4 py-3 text-ink/70 max-w-xs truncate">
+                  <td className="px-4 py-3 text-ink/70 max-w-xs truncate hidden md:table-cell">
                     {cart.description ?? '—'}
                   </td>
                   <td className="px-4 py-3">
