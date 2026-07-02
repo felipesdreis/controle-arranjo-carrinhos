@@ -35,12 +35,3 @@ export function validatePasswordMatch(password, confirmation) {
   if (password !== confirmation) return 'As senhas não correspondem.'
   return null
 }
-
-/**
- * Conveniência: retorna true se o email tem formato válido.
- * @param {string} email
- * @returns {boolean}
- */
-export function isValidEmail(email) {
-  return validateEmail(email) === null
-}
