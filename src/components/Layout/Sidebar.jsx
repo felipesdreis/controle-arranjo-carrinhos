@@ -9,7 +9,7 @@ import {
   Settings,
   Shield,
 } from 'lucide-react'
-import AdminOnly from '../AdminOnly'
+import { useRoleCheck } from '../../hooks/useRoleCheck'
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', Icon: Home },
@@ -40,6 +40,7 @@ function NavItem({ to, label, Icon, onClose }) {
 }
 
 export default function Sidebar({ isOpen, onClose }) {
+  const isAdmin = useRoleCheck('admin')
   return (
     <>
       {/* Overlay para mobile */}
@@ -69,7 +70,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         <div className="px-3 py-4 border-t border-white/10 space-y-1">
-          <AdminOnly>
+          {isAdmin && (
             <NavLink
               to="/admin/users"
               onClick={onClose}
@@ -84,7 +85,7 @@ export default function Sidebar({ isOpen, onClose }) {
               <Shield size={18} />
               Administração
             </NavLink>
-          </AdminOnly>
+          )}
           <NavLink
             to="/settings"
             onClick={onClose}
