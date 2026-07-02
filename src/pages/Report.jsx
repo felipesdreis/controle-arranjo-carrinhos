@@ -1,28 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Download, Printer } from 'lucide-react'
 import { format, addWeeks, subWeeks, addDays } from 'date-fns'
 import useAppStore from '../store/useAppStore'
 import { getSlotsWithDetails } from '../api/slots'
 import { getAssignmentsByWeek } from '../api/assignments'
+import { getThisMonday, getPeriodFromTime } from '../lib/scheduleGrid'
 
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const REPORT_DAYS = [1, 2, 3, 4, 5, 6, 0]
 const DAY_OFFSET  = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }
-
-function getThisMonday() {
-  const d = new Date()
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function getPeriodFromTime(time) {
-  if (time < '12:00') return 'MANHÃ'
-  if (time < '18:00') return 'TARDE'
-  return 'NOITE'
-}
 
 function buildReportGridByCart(slots, rawAssignments, brothers) {
   const brotherMap = {}
@@ -77,7 +63,8 @@ export default function Report() {
 
   const [monday, setMonday] = useState(getThisMonday)
   const [week, setWeek] = useState(null)
-  const [grid, setGrid] = useState([])
+  const [slots, setSlots] = useState([])
+  const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
@@ -85,24 +72,23 @@ export default function Report() {
   const weekEnd   = format(addDays(monday, 6), 'dd/MM/yyyy')
   const weekLabel = `${format(monday, 'dd/MM')} a ${weekEnd}`
 
-  const loadData = useCallback(
-    async (w) => {
-      setLoading(true)
-      try {
-        const [slots, rawAssignments] = await Promise.all([
-          getSlotsWithDetails(),
-          getAssignmentsByWeek(w.id),
-        ])
-        setGrid(buildReportGridByCart(slots, rawAssignments, brothers))
-      } catch (err) {
-        console.error('Erro ao carregar relatório:', err)
-        setGrid([])
-      } finally {
-        setLoading(false)
-      }
-    },
-    [brothers]
-  )
+  const loadData = useCallback(async (w) => {
+    setLoading(true)
+    try {
+      const [slotsData, assignmentsData] = await Promise.all([
+        getSlotsWithDetails(),
+        getAssignmentsByWeek(w.id),
+      ])
+      setSlots(slotsData)
+      setAssignments(assignmentsData)
+    } catch (err) {
+      console.error('Erro ao carregar relatório:', err)
+      setSlots([])
+      setAssignments([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     const existing = scheduleWeeks.find((w) => w.week_start === weekStart) ?? null
@@ -110,9 +96,15 @@ export default function Report() {
     if (existing) {
       loadData(existing)
     } else {
-      setGrid([])
+      setSlots([])
+      setAssignments([])
     }
   }, [scheduleWeeks, weekStart, loadData])
+
+  const grid = useMemo(
+    () => buildReportGridByCart(slots, assignments, brothers),
+    [slots, assignments, brothers]
+  )
 
   async function handleExportPDF() {
     if (!reportRef.current) return
