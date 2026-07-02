@@ -1,11 +1,7 @@
-import { getSupabaseClient } from './client'
+import { requireAuthedClient } from './client'
 
 export async function getCarts() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('carts')
     .select('*')
@@ -16,11 +12,7 @@ export async function getCarts() {
 }
 
 export async function createCart(name) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('carts')
     .insert([{ name, user_id: user.id }])
@@ -30,11 +22,7 @@ export async function createCart(name) {
 }
 
 export async function updateCart(id, name) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('carts')
     .update({ name })
@@ -46,11 +34,7 @@ export async function updateCart(id, name) {
 }
 
 export async function deleteCart(id) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { error } = await supabase
     .from('carts')
     .delete()

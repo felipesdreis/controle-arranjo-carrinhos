@@ -1,11 +1,7 @@
-import { getSupabaseClient } from './client'
+import { requireAuthedClient } from './client'
 
 export async function getSlots() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('slots')
     .select('*')
@@ -17,11 +13,7 @@ export async function getSlots() {
 }
 
 export async function createSlot({ location_id, cart_id, group_id, day_of_week, start_time, end_time, capacity }) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('slots')
     .insert({ location_id, cart_id, group_id, day_of_week, start_time, end_time, capacity, user_id: user.id })
@@ -31,11 +23,7 @@ export async function createSlot({ location_id, cart_id, group_id, day_of_week, 
 }
 
 export async function updateSlot(id, updates) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('slots')
     .update(updates)
@@ -47,11 +35,7 @@ export async function updateSlot(id, updates) {
 }
 
 export async function deleteSlot(id) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { error } = await supabase
     .from('slots')
     .delete()
@@ -62,11 +46,7 @@ export async function deleteSlot(id) {
 
 // Retorna slots com nomes dos locais e carrinhos via foreign key join
 export async function getSlotsWithDetails() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('slots')
     .select('*, locations(name), carts(name)')

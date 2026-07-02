@@ -25,6 +25,21 @@ export function getSupabaseClient() {
 }
 
 /**
+ * Retorna o cliente Supabase e o usuário autenticado, ou lança erro.
+ * Usado no início de toda função de API que precisa de sessão.
+ *
+ * @returns {Promise<{ supabase: import('@supabase/supabase-js').SupabaseClient, user: import('@supabase/supabase-js').User }>}
+ */
+export async function requireAuthedClient() {
+  const supabase = getSupabaseClient()
+  if (!supabase) throw new Error('Supabase not configured')
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  if (!user) throw new Error('Não autenticado')
+  return { supabase, user }
+}
+
+/**
  * Valida a presença das variáveis de ambiente Supabase e testa a conectividade.
  * Nunca lança exceção — retorna sempre um objeto { ok, code?, message? }.
  * Falhas de conectividade são tratadas como aviso (schema EP-03 ainda pendente).

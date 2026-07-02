@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './client'
+import { requireAuthedClient } from './client'
 
 /**
  * Busca usuários com aprovação pendente (is_approved=false), mais recentes primeiro.
@@ -7,11 +7,7 @@ import { getSupabaseClient } from './client'
  * @returns {Promise<Array>}
  */
 export async function getPendingUsers() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
@@ -28,11 +24,7 @@ export async function getPendingUsers() {
  * @returns {Promise<Array>}
  */
 export async function getAllUsers() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
@@ -49,11 +41,7 @@ export async function getAllUsers() {
  * @returns {Promise<Object>}
  */
 export async function updateUserApprovalStatus(userId, isApproved) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('user_profiles')
     .update({ is_approved: isApproved })
@@ -74,11 +62,7 @@ export async function updateUserRole(userId, role) {
   if (!['admin', 'user'].includes(role)) {
     throw new Error(`Role inválido: "${role}". Valores aceitos: admin, user`)
   }
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('user_profiles')
     .update({ role })

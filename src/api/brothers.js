@@ -1,11 +1,7 @@
-import { getSupabaseClient } from './client'
+import { requireAuthedClient } from './client'
 
 export async function getBrothers() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('brothers')
     .select('*')
@@ -16,11 +12,7 @@ export async function getBrothers() {
 }
 
 export async function createBrother({ name, phone, notes }) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('brothers')
     .insert([{ name, user_id: user.id, phone: phone ?? null, notes: notes ?? null }])
@@ -30,11 +22,7 @@ export async function createBrother({ name, phone, notes }) {
 }
 
 export async function updateBrother(id, { name, phone, notes }) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('brothers')
     .update({ name, phone: phone ?? null, notes: notes ?? null })
@@ -46,11 +34,7 @@ export async function updateBrother(id, { name, phone, notes }) {
 }
 
 export async function deleteBrother(id) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { error } = await supabase
     .from('brothers')
     .delete()

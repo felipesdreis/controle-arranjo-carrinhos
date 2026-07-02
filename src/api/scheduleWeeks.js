@@ -1,11 +1,7 @@
-import { getSupabaseClient } from './client'
+import { requireAuthedClient } from './client'
 
 export async function getScheduleWeeks() {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('schedule_weeks')
     .select('*')
@@ -15,11 +11,7 @@ export async function getScheduleWeeks() {
 }
 
 export async function createScheduleWeek(weekStart, notes = null) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('schedule_weeks')
     .insert({ week_start: weekStart, notes, user_id: user.id })
@@ -29,11 +21,7 @@ export async function createScheduleWeek(weekStart, notes = null) {
 }
 
 export async function updateScheduleWeek(id, updates) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { data, error } = await supabase
     .from('schedule_weeks')
     .update(updates)
@@ -45,11 +33,7 @@ export async function updateScheduleWeek(id, updates) {
 }
 
 export async function deleteScheduleWeek(id) {
-  const supabase = getSupabaseClient()
-  if (!supabase) throw new Error('Supabase not configured')
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user
-  if (!user) throw new Error('Não autenticado')
+  const { supabase, user } = await requireAuthedClient()
   const { error } = await supabase
     .from('schedule_weeks')
     .delete()
