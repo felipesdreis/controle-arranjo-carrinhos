@@ -60,6 +60,13 @@ Guiada por `docs/USER_STORIES_SUPABASE_MIGRATION.md` (EP-01..EP-09). Todos concl
 - **congregationName no Supabase**: migrado do localStorage para `user_settings` via `store.saveCongregationName()`.
 - **Backup JSON**: Preferências → Exportar dados (JSON) via `exportAllData()`. O `.db` OPFS não é mais o mecanismo principal.
 
+## Gotchas de UI / responsividade mobile
+
+- **Breakpoint único `md` (768px)**: toda a responsividade do app usa só esse ponto de virada (drawer do Sidebar, tabelas, grade do Schedule). Não introduzir `sm`/`lg` como breakpoint de layout — `sm:grid-cols-2` só é usado dentro de formulários em modal.
+- **Headers com dois grupos flex** (`flex items-center justify-between` combinando nav + toolbar de botões): o `flex-wrap` precisa estar no container **externo**, não só nos grupos internos — senão a linha estoura horizontalmente em mobile mesmo com wrap interno já presente (bug real encontrado em `Schedule.jsx`).
+- **Testar mobile via claude-in-chrome**: `resize_window` não altera `window.innerWidth` neste ambiente (fica travado no tamanho real da janela) — não confiar em screenshots do agente para validar breakpoints; pedir para o usuário testar em dispositivo real ou orientar DevTools manual.
+- **Report.jsx — `data-print-target`**: o mesmo elemento serve a três consumidores — tela (fluida), impressão nativa (`@media print` em `src/index.css`, `@page A4 landscape margin 10mm`) e exportação PDF/imagem (`html2pdf`/`html2canvas`). Para a exportação sair em fidelidade desktop independente do dispositivo, usar `windowWidth` em `.set({ html2canvas: {...} })`.
+
 ## Gotchas Supabase
 
 - **IDs são UUID string**: nunca usar `Number(id)` para comparar ou passar IDs de entidades.
