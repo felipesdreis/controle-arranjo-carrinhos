@@ -4,6 +4,7 @@ import useAppStore from '../store/useAppStore'
 import Modal from '../components/ui/Modal'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 
 export default function Carts() {
   const store = useAppStore()
@@ -91,15 +92,7 @@ export default function Carts() {
                     {cart.description ?? '—'}
                   </td>
                   <td className="px-4 py-3">
-                    {cart.active === true ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green-soft text-accent-green">
-                        Ativo
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-subtle text-ink/50">
-                        Inativo
-                      </span>
-                    )}
+                    <Badge active={cart.active === true} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

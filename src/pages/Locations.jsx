@@ -4,6 +4,7 @@ import useAppStore from '../store/useAppStore'
 import Modal from '../components/ui/Modal'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -16,18 +17,6 @@ function hasOverlap(slots, dayOfWeek, startTime, endTime, excludeId = null) {
       s.id !== excludeId &&
       s.day_of_week === dayOfWeek &&
       !(s.end_time <= startTime || s.start_time >= endTime)
-  )
-}
-
-function Badge({ active }) {
-  return active ? (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-green-soft text-accent-green">
-      Ativo
-    </span>
-  ) : (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-subtle text-ink/50">
-      Inativo
-    </span>
   )
 }
 

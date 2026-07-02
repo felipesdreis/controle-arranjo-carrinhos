@@ -6,6 +6,7 @@ import useAppStore from '../store/useAppStore'
 import { getSlotsWithDetails, createSlot as createSlotApi, updateSlot as updateSlotApi, deleteSlot as deleteSlotApi } from '../api/slots'
 import { getAssignmentsByWeek, upsertAssignment, deleteAssignmentsByWeek } from '../api/assignments'
 import { getScheduleWeeks, createScheduleWeek } from '../api/scheduleWeeks'
+import { getThisMonday, getPeriodFromTime } from '../lib/scheduleGrid'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 
@@ -14,21 +15,6 @@ const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0]
 const DAY_OFFSET = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 }
 
 const EMPTY_FORM = { location_id: '', day_of_week: '1', start_time: '', end_time: '', cart_id: '', capacity: '2' }
-
-function getThisMonday() {
-  const d = new Date()
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function getPeriodFromTime(time) {
-  if (time < '12:00') return 'MANHÃ'
-  if (time < '18:00') return 'TARDE'
-  return 'NOITE'
-}
 
 function buildGridByCart(slots) {
   const cartMap = {}
