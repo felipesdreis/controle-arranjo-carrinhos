@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'react'
 import { ChevronLeft, ChevronRight, Download, Printer } from 'lucide-react'
 import { format, addWeeks, subWeeks, addDays } from 'date-fns'
 import useAppStore from '../store/useAppStore'
@@ -91,9 +91,97 @@ function buildBrotherRows(slots, rawAssignments, brothers, brotherId) {
   })
 }
 
+const CARD_HEADER_COLORS = ['#f3e8fd', '#e3f0fb']
+
+const BrotherCardReport = forwardRef(function BrotherCardReport({ brotherName, rows, monday, congregationName }, ref) {
+  return (
+    <div
+      ref={ref}
+      style={{
+        width: '400px',
+        background: 'white',
+        borderRadius: 8,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        margin: '0 auto',
+      }}
+    >
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #e8d5f2 0%, #d4e5f7 100%)',
+          padding: '32px 24px',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 28, fontWeight: 600, color: '#2d3142', letterSpacing: '-0.5px' }}>
+          {brotherName}
+        </div>
+        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6, letterSpacing: '0.3px' }}>
+          Arranjos
+        </div>
+      </div>
+
+      <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            style={{ background: '#f9f7fd', borderRadius: 8, overflow: 'hidden', border: '1px solid #eee6f7' }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                background: CARD_HEADER_COLORS[i % CARD_HEADER_COLORS.length],
+              }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#2d3142' }}>
+                {DAY_LABELS[row.day_of_week]} · {format(addDays(monday, DAY_OFFSET[row.day_of_week]), 'dd/MM')}
+              </span>
+              <span style={{ fontSize: 12, color: '#4b5563', fontWeight: 500 }}>{row.time}</span>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                borderTop: '1px solid rgba(0,0,0,0.05)',
+              }}
+            >
+              {[
+                ['Local', row.location],
+                ['Carrinho', row.cart_name],
+                ['Colega', row.colleagues.join(', ') || '—'],
+              ].map(([label, value], ci) => (
+                <div
+                  key={label}
+                  style={{
+                    padding: '10px 12px',
+                    borderRight: ci < 2 ? '1px solid rgba(0,0,0,0.05)' : 'none',
+                  }}
+                >
+                  <div style={{ fontSize: 9, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 3 }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 12.5, fontWeight: 500, color: '#1f2937' }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: '#fafaf9', padding: '12px 24px', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: 11, color: '#9ca3af' }}>
+        Arranjo de Testemunho Público • {congregationName}
+      </div>
+    </div>
+  )
+})
+
 export default function Report() {
   const { brothers, scheduleWeeks, congregationName } = useAppStore()
   const reportRef = useRef(null)
+  const cardRef = useRef(null)
 
   const [monday, setMonday] = useState(getThisMonday)
   const [week, setWeek] = useState(null)
@@ -103,6 +191,7 @@ export default function Report() {
   const [exporting, setExporting] = useState(false)
   const [mode, setMode] = useState('week')
   const [selectedBrotherId, setSelectedBrotherId] = useState('')
+  const [brotherLayout, setBrotherLayout] = useState('table')
 
   const weekStart = format(monday, 'yyyy-MM-dd')
   const weekEnd   = format(addDays(monday, 6), 'dd/MM/yyyy')
@@ -147,6 +236,7 @@ export default function Report() {
     [slots, assignments, brothers, selectedBrotherId]
   )
   const selectedBrotherName = brothers.find((b) => b.id === selectedBrotherId)?.name ?? ''
+  const isBrotherCards = mode === 'brother' && brotherLayout === 'cards'
 
   async function handleExportPDF() {
     if (!reportRef.current) return
@@ -163,6 +253,26 @@ export default function Report() {
         })
         .from(reportRef.current)
         .save()
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function handleExportImage() {
+    if (!cardRef.current) return
+    setExporting(true)
+    try {
+      const html2pdf = (await import('html2pdf.js')).default
+      const worker = html2pdf()
+        .set({ html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' } })
+        .from(cardRef.current)
+        .toCanvas()
+      await worker
+      const canvas = worker.prop.canvas
+      const link = document.createElement('a')
+      link.download = `arranjo_${selectedBrotherName || 'irmao'}_${weekStart}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
     } finally {
       setExporting(false)
     }
@@ -203,12 +313,16 @@ export default function Report() {
             Imprimir
           </button>
           <button
-            onClick={handleExportPDF}
+            onClick={mode === 'brother' && brotherLayout === 'cards' ? handleExportImage : handleExportPDF}
             disabled={!week || exporting}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 hover:bg-slate-800 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={14} />
-            {exporting ? 'Gerando PDF...' : 'Exportar PDF'}
+            {exporting
+              ? 'Gerando...'
+              : mode === 'brother' && brotherLayout === 'cards'
+              ? 'Exportar Imagem'
+              : 'Exportar PDF'}
           </button>
         </div>
       </div>
@@ -235,18 +349,39 @@ export default function Report() {
         </div>
 
         {mode === 'brother' && (
-          <select
-            value={selectedBrotherId}
-            onChange={(e) => setSelectedBrotherId(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-slate-700 bg-white"
-          >
-            <option value="">Selecione um irmão...</option>
-            {brothers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              value={selectedBrotherId}
+              onChange={(e) => setSelectedBrotherId(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-slate-700 bg-white"
+            >
+              <option value="">Selecione um irmão...</option>
+              {brothers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setBrotherLayout('table')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  brotherLayout === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Tabela
+              </button>
+              <button
+                onClick={() => setBrotherLayout('cards')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  brotherLayout === 'cards' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Cards
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -273,24 +408,44 @@ export default function Report() {
             ref={reportRef}
             data-print-target
             className="bg-white shadow-md mx-auto print:shadow-none"
-            style={{ width: '277mm', minHeight: '190mm', padding: '10mm' }}
+            style={isBrotherCards ? { padding: '24px' } : { width: '277mm', minHeight: '190mm', padding: '10mm' }}
           >
             {/* Cabeçalho do relatório */}
-            <div className="text-center mb-4">
-              <h1
-                className="font-bold uppercase tracking-wide text-slate-800"
-                style={{ fontSize: '13pt' }}
-              >
-                Arranjo de Testemunho Público com o Carrinho
-              </h1>
-              <p className="text-slate-600 mt-0.5" style={{ fontSize: '10pt' }}>
-                {congregationName} &nbsp;|&nbsp; Semana:{' '}
-                {format(monday, 'dd/MM/yyyy')} a {weekEnd}
-              </p>
-            </div>
+            {!isBrotherCards && (
+              <div className="text-center mb-4">
+                <h1
+                  className="font-bold uppercase tracking-wide text-slate-800"
+                  style={{ fontSize: '13pt' }}
+                >
+                  Arranjo de Testemunho Público com o Carrinho
+                </h1>
+                <p className="text-slate-600 mt-0.5" style={{ fontSize: '10pt' }}>
+                  {congregationName} &nbsp;|&nbsp; Semana:{' '}
+                  {format(monday, 'dd/MM/yyyy')} a {weekEnd}
+                </p>
+              </div>
+            )}
 
-            {/* Tabela do relatório: grade semanal ou designações do irmão selecionado */}
-            {mode === 'week' ? (
+            {/* Tabela do relatório: grade semanal, designações do irmão ou cards do irmão */}
+            {isBrotherCards ? (
+              !selectedBrotherId ? (
+                <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                  Selecione um irmão para ver as designações.
+                </p>
+              ) : brotherRows.length === 0 ? (
+                <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                  Nenhuma designação para {selectedBrotherName} nesta semana.
+                </p>
+              ) : (
+                <BrotherCardReport
+                  ref={cardRef}
+                  brotherName={selectedBrotherName}
+                  rows={brotherRows}
+                  monday={monday}
+                  congregationName={congregationName}
+                />
+              )
+            ) : mode === 'week' ? (
               grid.length === 0 ? (
                 <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
                   Nenhum turno configurado ou designações vazias.
@@ -462,9 +617,11 @@ export default function Report() {
             )}
 
             {/* Rodapé */}
-            <div className="mt-4 text-right text-slate-400" style={{ fontSize: '7pt' }}>
-              Gerado em {format(new Date(), 'dd/MM/yyyy HH:mm')}
-            </div>
+            {!isBrotherCards && (
+              <div className="mt-4 text-right text-slate-400" style={{ fontSize: '7pt' }}>
+                Gerado em {format(new Date(), 'dd/MM/yyyy HH:mm')}
+              </div>
+            )}
           </div>
           </div>
         )}
