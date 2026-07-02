@@ -57,6 +57,40 @@ function buildReportGridByCart(slots, rawAssignments, brothers) {
   }))
 }
 
+function buildBrotherRows(slots, rawAssignments, brothers, brotherId) {
+  const brotherMap = {}
+  for (const b of brothers) brotherMap[b.id] = b.name
+
+  const slotMap = {}
+  for (const slot of slots) slotMap[slot.id] = slot
+
+  const rows = []
+  for (const a of rawAssignments) {
+    if (a.brother_id !== brotherId) continue
+    const slot = slotMap[a.slot_id]
+    if (!slot) continue
+
+    const colleagues = rawAssignments
+      .filter((other) => other.slot_id === a.slot_id && other.brother_id !== brotherId)
+      .map((other) => brotherMap[other.brother_id])
+      .filter(Boolean)
+
+    rows.push({
+      day_of_week: slot.day_of_week,
+      time: `${slot.start_time}–${slot.end_time}`,
+      location: slot.location_name,
+      cart_name: slot.cart_name || 'Sem Carrinho',
+      colleagues,
+    })
+  }
+
+  return rows.sort((a, b) => {
+    const dayDiff = DAY_OFFSET[a.day_of_week] - DAY_OFFSET[b.day_of_week]
+    if (dayDiff !== 0) return dayDiff
+    return a.time.localeCompare(b.time)
+  })
+}
+
 export default function Report() {
   const { brothers, scheduleWeeks, congregationName } = useAppStore()
   const reportRef = useRef(null)
@@ -67,6 +101,8 @@ export default function Report() {
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [mode, setMode] = useState('week')
+  const [selectedBrotherId, setSelectedBrotherId] = useState('')
 
   const weekStart = format(monday, 'yyyy-MM-dd')
   const weekEnd   = format(addDays(monday, 6), 'dd/MM/yyyy')
@@ -105,6 +141,12 @@ export default function Report() {
     () => buildReportGridByCart(slots, assignments, brothers),
     [slots, assignments, brothers]
   )
+
+  const brotherRows = useMemo(
+    () => (selectedBrotherId ? buildBrotherRows(slots, assignments, brothers, selectedBrotherId) : []),
+    [slots, assignments, brothers, selectedBrotherId]
+  )
+  const selectedBrotherName = brothers.find((b) => b.id === selectedBrotherId)?.name ?? ''
 
   async function handleExportPDF() {
     if (!reportRef.current) return
@@ -171,6 +213,43 @@ export default function Report() {
         </div>
       </div>
 
+      {/* Barra de modo do relatório */}
+      <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-gray-200 bg-white shrink-0 print:hidden">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setMode('week')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mode === 'week' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Visão semanal
+          </button>
+          <button
+            onClick={() => setMode('brother')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mode === 'brother' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Por irmão
+          </button>
+        </div>
+
+        {mode === 'brother' && (
+          <select
+            value={selectedBrotherId}
+            onChange={(e) => setSelectedBrotherId(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-slate-700 bg-white"
+          >
+            <option value="">Selecione um irmão...</option>
+            {brothers.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
       {/* Área de conteúdo */}
       <div className="flex-1 overflow-auto bg-gray-100 p-6 print:p-0 print:bg-white">
         {loading ? (
@@ -210,108 +289,175 @@ export default function Report() {
               </p>
             </div>
 
-            {/* Tabela do relatório agrupada por carrinho + período */}
-            {grid.length === 0 ? (
-              <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
-                Nenhum turno configurado ou designações vazias.
-              </p>
-            ) : (
-              <div className="space-y-6">
-                {grid.map((cart) => (
-                  <div key={cart.cart_id}>
-                    <h2
-                      className="text-center font-bold uppercase tracking-wide text-slate-800 mb-1"
-                      style={{ fontSize: '11pt' }}
-                    >
-                      Carrinho {cart.cart_name}
-                    </h2>
-                    <table
-                      className="w-full border-collapse"
-                      style={{ fontSize: '9pt', tableLayout: 'fixed' }}
-                    >
-                      <colgroup>
-                        <col style={{ width: '14%' }} />
-                        {REPORT_DAYS.map((d) => (
-                          <col key={d} style={{ width: `${86 / REPORT_DAYS.length}%` }} />
-                        ))}
-                      </colgroup>
-                      <thead>
-                        <tr>
-                          <th
-                            className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold"
-                            style={{ fontSize: '8.5pt' }}
-                          >
-                            Período
-                          </th>
-                          {REPORT_DAYS.map((d) => {
-                            const date = addDays(monday, DAY_OFFSET[d])
-                            return (
-                              <th
-                                key={d}
-                                className="border border-slate-400 bg-slate-700 text-white px-1 py-1 text-center font-semibold"
-                                style={{ fontSize: '8.5pt' }}
-                              >
-                                {DAY_LABELS[d]}
-                                <br />
-                                <span style={{ fontSize: '7.5pt', fontWeight: 400 }}>
-                                  {format(date, 'dd/MM')}
-                                </span>
-                              </th>
-                            )
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cart.periods.map((periodObj) => (
-                          <tr key={periodObj.period}>
-                            <td
-                              className="border border-slate-300 px-2 py-1 font-semibold bg-slate-50 text-slate-700"
-                              style={{ fontSize: '8pt' }}
+            {/* Tabela do relatório: grade semanal ou designações do irmão selecionado */}
+            {mode === 'week' ? (
+              grid.length === 0 ? (
+                <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                  Nenhum turno configurado ou designações vazias.
+                </p>
+              ) : (
+                <div className="space-y-6">
+                  {grid.map((cart) => (
+                    <div key={cart.cart_id}>
+                      <h2
+                        className="text-center font-bold uppercase tracking-wide text-slate-800 mb-1"
+                        style={{ fontSize: '11pt' }}
+                      >
+                        Carrinho {cart.cart_name}
+                      </h2>
+                      <table
+                        className="w-full border-collapse"
+                        style={{ fontSize: '9pt', tableLayout: 'fixed' }}
+                      >
+                        <colgroup>
+                          <col style={{ width: '14%' }} />
+                          {REPORT_DAYS.map((d) => (
+                            <col key={d} style={{ width: `${86 / REPORT_DAYS.length}%` }} />
+                          ))}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th
+                              className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold"
+                              style={{ fontSize: '8.5pt' }}
                             >
-                              {periodObj.period}
-                            </td>
+                              Período
+                            </th>
                             {REPORT_DAYS.map((d) => {
-                              const dayEntries = periodObj.days[d]
+                              const date = addDays(monday, DAY_OFFSET[d])
                               return (
-                                <td
+                                <th
                                   key={d}
-                                  className="border border-slate-300 px-1 py-1 align-top text-center"
-                                  style={{ verticalAlign: 'top' }}
+                                  className="border border-slate-400 bg-slate-700 text-white px-1 py-1 text-center font-semibold"
+                                  style={{ fontSize: '8.5pt' }}
                                 >
-                                  {dayEntries && dayEntries.length > 0 ? (
-                                    <div className="flex flex-col gap-1">
-                                      {dayEntries.map((data, ei) => (
-                                        <div key={ei} className={ei > 0 ? 'border-t border-slate-200 pt-1' : ''}>
-                                          {data.names.map((name, i) => (
-                                            <div
-                                              key={i}
-                                              className="text-slate-800 leading-snug"
-                                              style={{ fontSize: '8.5pt', minHeight: '13pt' }}
-                                            >
-                                              {name || ''}
-                                            </div>
-                                          ))}
-                                          <div className="text-slate-500" style={{ fontSize: '7pt' }}>
-                                            {data.location}
-                                          </div>
-                                          <div className="text-slate-400 font-mono" style={{ fontSize: '7pt' }}>
-                                            {data.time}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div style={{ minHeight: '13pt' }} />
-                                  )}
-                                </td>
+                                  {DAY_LABELS[d]}
+                                  <br />
+                                  <span style={{ fontSize: '7.5pt', fontWeight: 400 }}>
+                                    {format(date, 'dd/MM')}
+                                  </span>
+                                </th>
                               )
                             })}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
+                        </thead>
+                        <tbody>
+                          {cart.periods.map((periodObj) => (
+                            <tr key={periodObj.period}>
+                              <td
+                                className="border border-slate-300 px-2 py-1 font-semibold bg-slate-50 text-slate-700"
+                                style={{ fontSize: '8pt' }}
+                              >
+                                {periodObj.period}
+                              </td>
+                              {REPORT_DAYS.map((d) => {
+                                const dayEntries = periodObj.days[d]
+                                return (
+                                  <td
+                                    key={d}
+                                    className="border border-slate-300 px-1 py-1 align-top text-center"
+                                    style={{ verticalAlign: 'top' }}
+                                  >
+                                    {dayEntries && dayEntries.length > 0 ? (
+                                      <div className="flex flex-col gap-1">
+                                        {dayEntries.map((data, ei) => (
+                                          <div key={ei} className={ei > 0 ? 'border-t border-slate-200 pt-1' : ''}>
+                                            {data.names.map((name, i) => (
+                                              <div
+                                                key={i}
+                                                className="text-slate-800 leading-snug"
+                                                style={{ fontSize: '8.5pt', minHeight: '13pt' }}
+                                              >
+                                                {name || ''}
+                                              </div>
+                                            ))}
+                                            <div className="text-slate-500" style={{ fontSize: '7pt' }}>
+                                              {data.location}
+                                            </div>
+                                            <div className="text-slate-400 font-mono" style={{ fontSize: '7pt' }}>
+                                              {data.time}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div style={{ minHeight: '13pt' }} />
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : !selectedBrotherId ? (
+              <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                Selecione um irmão para ver as designações.
+              </p>
+            ) : brotherRows.length === 0 ? (
+              <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                Nenhuma designação para {selectedBrotherName} nesta semana.
+              </p>
+            ) : (
+              <div>
+                <h2
+                  className="text-center font-bold uppercase tracking-wide text-slate-800 mb-1"
+                  style={{ fontSize: '11pt' }}
+                >
+                  Designações de {selectedBrotherName}
+                </h2>
+                <table className="w-full border-collapse" style={{ fontSize: '9pt' }}>
+                  <thead>
+                    <tr>
+                      <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                        Dia
+                      </th>
+                      <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                        Data
+                      </th>
+                      <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                        Horário
+                      </th>
+                      <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                        Local
+                      </th>
+                      <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                        Carrinho
+                      </th>
+                      <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                        Colegas
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brotherRows.map((row, i) => (
+                      <tr key={i}>
+                        <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                          {DAY_LABELS[row.day_of_week]}
+                        </td>
+                        <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                          {format(addDays(monday, DAY_OFFSET[row.day_of_week]), 'dd/MM')}
+                        </td>
+                        <td className="border border-slate-300 px-2 py-1 text-slate-800 font-mono" style={{ fontSize: '8.5pt' }}>
+                          {row.time}
+                        </td>
+                        <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                          {row.location}
+                        </td>
+                        <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                          {row.cart_name}
+                        </td>
+                        <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                          {row.colleagues.join(', ')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
