@@ -36,6 +36,10 @@ function mapErrorMessage(message) {
     return 'Muitas tentativas. Aguarde alguns minutos e tente novamente'
   }
 
+  if (lower.includes('new password should be different from the old password')) {
+    return 'A nova senha deve ser diferente da atual'
+  }
+
   return message
 }
 
@@ -124,4 +128,39 @@ export async function signOut() {
   } catch {
     // Ignorado: estado local já foi limpo antes desta chamada (logout otimista)
   }
+}
+
+/**
+ * Envia email com link de recuperação de senha.
+ * Nunca revela se o email existe no sistema (mesma resposta em ambos os casos).
+ *
+ * @param {string} email
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function requestPasswordReset(email) {
+  const client = getSupabaseClient()
+  if (!client) return { ok: false, error: 'Supabase não configurado' }
+
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  })
+
+  if (error) return { ok: false, error: mapErrorMessage(error.message) }
+  return { ok: true }
+}
+
+/**
+ * Define uma nova senha para a sessão de recuperação atual.
+ *
+ * @param {string} newPassword
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function updatePassword(newPassword) {
+  const client = getSupabaseClient()
+  if (!client) return { ok: false, error: 'Supabase não configurado' }
+
+  const { error } = await client.auth.updateUser({ password: newPassword })
+
+  if (error) return { ok: false, error: mapErrorMessage(error.message) }
+  return { ok: true }
 }

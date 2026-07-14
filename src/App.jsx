@@ -8,6 +8,7 @@ import Sidebar from './components/Layout/Sidebar'
 import Header from './components/Layout/Header'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthPage from './pages/Auth/AuthPage'
+import UpdatePassword from './pages/Auth/UpdatePassword'
 import Dashboard from './pages/Dashboard'
 import Brothers from './pages/Brothers'
 import Carts from './pages/Carts'
@@ -110,7 +111,13 @@ export default function App() {
 
   // Usuário autenticado mas não aprovado: redireciona para /auth
   // (o authReady garante que o userProfile já foi carregado antes de avaliar)
-  if (authReady && user && userProfile && !userProfile.is_approved) {
+  if (
+    authReady &&
+    user &&
+    userProfile &&
+    !userProfile.is_approved &&
+    window.location.pathname !== '/reset-password'
+  ) {
     return (
       <BrowserRouter>
         <Routes>
@@ -155,6 +162,14 @@ export default function App() {
               <AuthPage />
             )
           }
+        />
+        {/* Rota pública: definir nova senha via link de recuperação por email.
+            Não reaproveita /auth pois o Supabase autentica uma sessão de
+            recovery ao clicar no link (user ≠ null) — /auth redirecionaria
+            direto pro dashboard nesse caso. */}
+        <Route
+          path="/reset-password"
+          element={!authReady ? <LoadingScreen /> : <UpdatePassword />}
         />
         {/* Todas as rotas protegidas ficam dentro do ProtectedRoute */}
         <Route

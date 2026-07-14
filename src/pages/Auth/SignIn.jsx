@@ -9,7 +9,7 @@ import { validateEmail, validatePassword } from './authValidation'
  * Props:
  *   onSwitchMode — callback chamado quando o usuário quer ir para Sign Up
  */
-export default function SignIn({ onSwitchMode }) {
+export default function SignIn({ onSwitchMode, onForgotPassword }) {
   const signIn = useAuthStore((s) => s.signIn)
 
   const [email, setEmail] = useState('')
@@ -109,6 +109,14 @@ export default function SignIn({ onSwitchMode }) {
       >
         <LogIn size={16} />
         {loading ? 'Entrando…' : 'Entrar'}
+      </button>
+
+      <button
+        type="button"
+        onClick={onForgotPassword}
+        className="w-full text-center text-sm text-ink/60 underline underline-offset-2 hover:text-brand transition-colors"
+      >
+        Esqueci minha senha
       </button>
 
       <p className="text-center text-sm text-ink/60">

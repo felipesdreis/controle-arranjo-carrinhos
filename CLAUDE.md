@@ -44,6 +44,7 @@ Guiada por `docs/USER_STORIES_SUPABASE_MIGRATION.md` (EP-01..EP-09). Todos concl
 - **Schema**: 5 migrations em `supabase/migrations/` (aplicar em ordem numérica via SQL Editor). `user_profiles` tem coluna `email` (populada pelo trigger + backfill).
 - **RLS habilitado** (migration `20260614120000_enable_rls_policies.sql`): controle de acesso em **duas camadas** — RBAC client-side (EP-09) + RLS no banco. Modelo: leitura = qualquer aprovado (`is_approved()`); escrita = só admin (`is_admin()`); `user_profiles`/`user_settings` por usuário. Funções helper são `SECURITY DEFINER` (evitam recursão). **Não** é multi-tenant: `user_id` é rastreabilidade, não isolamento. Ao rodar essa migration no SQL Editor, **NÃO** clicar "Run without RLS".
 - **Aplicar migrations**: CLI não logada localmente (sem `psql`/DB password). Aplicar manual via SQL Editor do dashboard (na ordem dos arquivos) ou `supabase login`+`link`+`db push`.
+- **Reset de senha**: `resetPasswordForEmail`/`updateUser` funcionam sem migration, mas exigem configurar manualmente no Supabase Dashboard (Authentication → URL Configuration): Site URL = `https://carrinho.felipedosreis.com.br`, e Redirect URLs incluindo esse domínio + `http://localhost:5173/reset-password` para dev.
 
 ## RBAC (EP-09)
 
@@ -59,6 +60,8 @@ Guiada por `docs/USER_STORIES_SUPABASE_MIGRATION.md` (EP-01..EP-09). Todos concl
 - **`initializeData()` só no App.jsx**: nunca chamar em páginas individuais. O `if (loading)` em App.jsx está fora do `<BrowserRouter>` — qualquer `loading=true` desmonta o router inteiro, causando remontagem infinita se uma page chama `initializeData()` no `useEffect`.
 - **congregationName no Supabase**: migrado do localStorage para `user_settings` via `store.saveCongregationName()`.
 - **Backup JSON**: Preferências → Exportar dados (JSON) via `exportAllData()`. O `.db` OPFS não é mais o mecanismo principal.
+- **Rotas públicas de auth fora de `/auth`** (ex: `/reset-password`): não reaproveitar a rota `/auth` — ela redireciona `user ≠ null` direto pro dashboard, mas o Supabase autentica uma sessão de recovery (evento `PASSWORD_RECOVERY`) ao clicar no link do email, então o usuário já chega com `user` setado. Precisa ser rota própria, declarada antes do `/*`.
+- **Guarda de `is_approved` em App.jsx intercepta qualquer rota**: o bloco que renderiza "Aguardando aprovação" (quando `user && userProfile && !is_approved`) roda antes de qualquer `<Routes>` normal e bloqueia até rotas públicas novas. Bypassar por `window.location.pathname` quando a rota precisa ficar acessível mesmo sem aprovação (caso de `/reset-password`).
 
 ## Gotchas de UI / responsividade mobile
 

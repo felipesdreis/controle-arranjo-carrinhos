@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { getSupabaseClient } from '../api/client'
-import { signInWithPassword, signUp as signUpApi, signOut as signOutApi } from '../api/auth'
+import {
+  signInWithPassword,
+  signUp as signUpApi,
+  signOut as signOutApi,
+  requestPasswordReset as requestPasswordResetApi,
+  updatePassword as updatePasswordApi,
+} from '../api/auth'
 
 /**
  * Extrai o subconjunto de campos do usuário que o app precisa.
@@ -128,6 +134,28 @@ const useAuthStore = create((set, get) => ({
     // Limpa estado antes da chamada de rede — UX imediata sem esperar resposta
     set({ session: null, user: null, userProfile: null })
     await signOutApi()
+  },
+
+  /**
+   * Envia email com link de recuperação de senha.
+   *
+   * @param {string} email
+   * @returns {Promise<{ ok: boolean, error?: string }>}
+   */
+  requestPasswordReset: async (email) => {
+    const result = await requestPasswordResetApi(email)
+    return result.ok ? { ok: true } : { ok: false, error: result.error }
+  },
+
+  /**
+   * Define uma nova senha para a sessão de recuperação atual.
+   *
+   * @param {string} newPassword
+   * @returns {Promise<{ ok: boolean, error?: string }>}
+   */
+  updatePassword: async (newPassword) => {
+    const result = await updatePasswordApi(newPassword)
+    return result.ok ? { ok: true } : { ok: false, error: result.error }
   },
 }))
 

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import SignIn from './SignIn'
 import SignUp from './SignUp'
+import ForgotPassword from './ForgotPassword'
 import Card from '../../components/ui/Card'
 
-const MODES = /** @type {const} */ ({ signIn: 'signIn', signUp: 'signUp' })
+const MODES = /** @type {const} */ ({ signIn: 'signIn', signUp: 'signUp', forgotPassword: 'forgotPassword' })
 
 /**
  * Container público de autenticação.
@@ -30,38 +31,48 @@ export default function AuthPage() {
 
         {/* Card principal */}
         <Card className="overflow-hidden">
-          {/* Abas de navegação */}
-          <div className="flex border-b border-surface-border">
-            <button
-              type="button"
-              onClick={() => setMode(MODES.signIn)}
-              className={`flex-1 py-3.5 text-sm font-medium transition-colors focus:outline-none ${
-                isSignIn
-                  ? 'text-ink border-b-2 border-brand bg-surface-card'
-                  : 'text-ink/50 hover:text-ink/80 bg-surface-subtle'
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode(MODES.signUp)}
-              className={`flex-1 py-3.5 text-sm font-medium transition-colors focus:outline-none ${
-                !isSignIn
-                  ? 'text-ink border-b-2 border-brand bg-surface-card'
-                  : 'text-ink/50 hover:text-ink/80 bg-surface-subtle'
-              }`}
-            >
-              Criar Conta
-            </button>
-          </div>
+          {/* Abas de navegação — ocultas na tela de recuperação de senha */}
+          {mode !== MODES.forgotPassword && (
+            <div className="flex border-b border-surface-border">
+              <button
+                type="button"
+                onClick={() => setMode(MODES.signIn)}
+                className={`flex-1 py-3.5 text-sm font-medium transition-colors focus:outline-none ${
+                  isSignIn
+                    ? 'text-ink border-b-2 border-brand bg-surface-card'
+                    : 'text-ink/50 hover:text-ink/80 bg-surface-subtle'
+                }`}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode(MODES.signUp)}
+                className={`flex-1 py-3.5 text-sm font-medium transition-colors focus:outline-none ${
+                  !isSignIn
+                    ? 'text-ink border-b-2 border-brand bg-surface-card'
+                    : 'text-ink/50 hover:text-ink/80 bg-surface-subtle'
+                }`}
+              >
+                Criar Conta
+              </button>
+            </div>
+          )}
 
           {/* Conteúdo do formulário ativo */}
           <div className="px-6 py-6">
-            {isSignIn
-              ? <SignIn onSwitchMode={() => setMode(MODES.signUp)} />
-              : <SignUp onSwitchMode={() => setMode(MODES.signIn)} />
-            }
+            {mode === MODES.signIn && (
+              <SignIn
+                onSwitchMode={() => setMode(MODES.signUp)}
+                onForgotPassword={() => setMode(MODES.forgotPassword)}
+              />
+            )}
+            {mode === MODES.signUp && (
+              <SignUp onSwitchMode={() => setMode(MODES.signIn)} />
+            )}
+            {mode === MODES.forgotPassword && (
+              <ForgotPassword onBack={() => setMode(MODES.signIn)} />
+            )}
           </div>
         </Card>
       </div>
