@@ -62,6 +62,7 @@ Guiada por `docs/USER_STORIES_SUPABASE_MIGRATION.md` (EP-01..EP-09). Todos concl
 - **Backup JSON**: Preferências → Exportar dados (JSON) via `exportAllData()`. O `.db` OPFS não é mais o mecanismo principal.
 - **Rotas públicas de auth fora de `/auth`** (ex: `/reset-password`): não reaproveitar a rota `/auth` — ela redireciona `user ≠ null` direto pro dashboard, mas o Supabase autentica uma sessão de recovery (evento `PASSWORD_RECOVERY`) ao clicar no link do email, então o usuário já chega com `user` setado. Precisa ser rota própria, declarada antes do `/*`.
 - **Guarda de `is_approved` em App.jsx intercepta qualquer rota**: o bloco que renderiza "Aguardando aprovação" (quando `user && userProfile && !is_approved`) roda antes de qualquer `<Routes>` normal e bloqueia até rotas públicas novas. Bypassar por `window.location.pathname` quando a rota precisa ficar acessível mesmo sem aprovação (caso de `/reset-password`).
+- **Report.jsx tem múltiplos `mode` (week/location/brother) numa única tela**: `loadData()` busca `slots` sempre, mas só busca `assignments` quando existe `scheduleWeeks` para a semana atual (`week`). Um modo novo só pode ignorar `!week` se mostrar puramente a grade de turnos cadastrados (sem nomes); qualquer coluna com designações (irmãos) exige `assignments` e portanto continua preso à condição `!week` (tela "Semana sem programação", `disabled` do botão Exportar PDF).
 
 ## Gotchas de UI / responsividade mobile
 
