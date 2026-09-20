@@ -476,7 +476,7 @@ export default function Schedule() {
                   <Card key={cart.cart_id} className="overflow-hidden">
                     <div className="px-4 py-2 border-b border-surface-border bg-surface-subtle">
                       <h3 className="text-xs font-bold uppercase tracking-wide text-ink/70">
-                        Carrinho: {cart.cart_name}
+                        {cart.cart_name}
                       </h3>
                     </div>
 

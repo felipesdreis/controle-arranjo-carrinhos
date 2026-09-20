@@ -62,6 +62,47 @@ function buildReportGridByCart(slots, rawAssignments, brothers) {
   }))
 }
 
+function buildLocationsGrid(slots, rawAssignments, brothers) {
+  const brotherMap = {}
+  for (const b of brothers) brotherMap[b.id] = b.name
+
+  const assignMap = {}
+  for (const a of rawAssignments) {
+    assignMap[`${a.slot_id}-${a.position}`] = brotherMap[a.brother_id] ?? ''
+  }
+
+  const locMap = {}
+  for (const slot of slots) {
+    const locId = slot.location_id
+    if (!locMap[locId]) {
+      locMap[locId] = { location_id: locId, location_name: slot.location_name || 'Sem Local', rows: [] }
+    }
+
+    const names = []
+    for (let pos = 1; pos <= slot.capacity; pos++) {
+      names.push(assignMap[`${slot.id}-${pos}`] ?? '')
+    }
+    while (names.length > 1 && names[names.length - 1] === '') names.pop()
+
+    locMap[locId].rows.push({
+      day_of_week: slot.day_of_week,
+      time: `${slot.start_time}–${slot.end_time}`,
+      cart_name: slot.cart_name || 'Sem Carrinho',
+      names,
+    })
+  }
+
+  return Object.values(locMap)
+    .map((loc) => ({
+      ...loc,
+      rows: loc.rows.sort((a, b) => {
+        const dayDiff = DAY_OFFSET[a.day_of_week] - DAY_OFFSET[b.day_of_week]
+        return dayDiff !== 0 ? dayDiff : a.time.localeCompare(b.time)
+      }),
+    }))
+    .sort((a, b) => a.location_name.localeCompare(b.location_name))
+}
+
 function buildBrotherRows(slots, rawAssignments, brothers, brotherId) {
   const brotherMap = {}
   for (const b of brothers) brotherMap[b.id] = b.name
@@ -208,7 +249,7 @@ export default function Report() {
     try {
       const [slotsData, assignmentsData] = await Promise.all([
         getSlotsWithDetails(),
-        getAssignmentsByWeek(w.id),
+        w ? getAssignmentsByWeek(w.id) : Promise.resolve([]),
       ])
       setSlots(slotsData)
       setAssignments(assignmentsData)
@@ -224,16 +265,16 @@ export default function Report() {
   useEffect(() => {
     const existing = scheduleWeeks.find((w) => w.week_start === weekStart) ?? null
     setWeek(existing)
-    if (existing) {
-      loadData(existing)
-    } else {
-      setSlots([])
-      setAssignments([])
-    }
+    loadData(existing)
   }, [scheduleWeeks, weekStart, loadData])
 
   const grid = useMemo(
     () => buildReportGridByCart(slots, assignments, brothers),
+    [slots, assignments, brothers]
+  )
+
+  const locationsGrid = useMemo(
+    () => buildLocationsGrid(slots, assignments, brothers),
     [slots, assignments, brothers]
   )
 
@@ -252,7 +293,7 @@ export default function Report() {
       await html2pdf()
         .set({
           margin: [8, 8, 8, 8],
-          filename: `testemunho_${weekStart}.pdf`,
+          filename: mode === 'location' ? `locais_${weekStart}.pdf` : `testemunho_${weekStart}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, windowWidth: EXPORT_VIEWPORT_WIDTH },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
@@ -345,6 +386,14 @@ export default function Report() {
             Visão semanal
           </button>
           <button
+            onClick={() => setMode('location')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mode === 'location' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Por local
+          </button>
+          <button
             onClick={() => setMode('brother')}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               mode === 'brother' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
@@ -427,7 +476,7 @@ export default function Report() {
                   className="font-bold uppercase tracking-wide text-slate-800"
                   style={{ fontSize: '13pt' }}
                 >
-                  Arranjo de Testemunho Público com o Carrinho
+                  {mode === 'location' ? 'Locais e Turnos Cadastrados' : 'Arranjo de Testemunho Público com o Carrinho'}
                 </h1>
                 <p className="text-slate-600 mt-0.5" style={{ fontSize: '10pt' }}>
                   {congregationName} &nbsp;|&nbsp; Semana:{' '}
@@ -468,7 +517,7 @@ export default function Report() {
                         className="text-center font-bold uppercase tracking-wide text-slate-800 mb-1"
                         style={{ fontSize: '11pt' }}
                       >
-                        Carrinho {cart.cart_name}
+                        {cart.cart_name}
                       </h2>
                       <table
                         className="w-full border-collapse"
@@ -551,6 +600,61 @@ export default function Report() {
                                   </td>
                                 )
                               })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : mode === 'location' ? (
+              locationsGrid.length === 0 ? (
+                <p className="text-center text-slate-400 py-8" style={{ fontSize: '10pt' }}>
+                  Nenhum turno cadastrado.
+                </p>
+              ) : (
+                <div className="space-y-6">
+                  {locationsGrid.map((loc) => (
+                    <div key={loc.location_id}>
+                      <h2
+                        className="text-center font-bold uppercase tracking-wide text-slate-800 mb-1"
+                        style={{ fontSize: '11pt' }}
+                      >
+                        {loc.location_name}
+                      </h2>
+                      <table className="w-full border-collapse" style={{ fontSize: '9pt' }}>
+                        <thead>
+                          <tr>
+                            <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                              Dia
+                            </th>
+                            <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                              Horário
+                            </th>
+                            <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                              Carrinho
+                            </th>
+                            <th className="border border-slate-400 bg-slate-700 text-white px-2 py-1 text-left font-semibold" style={{ fontSize: '8.5pt' }}>
+                              Irmãos
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loc.rows.map((row, i) => (
+                            <tr key={i}>
+                              <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                                {DAY_LABELS[row.day_of_week]}
+                              </td>
+                              <td className="border border-slate-300 px-2 py-1 text-slate-800 font-mono" style={{ fontSize: '8.5pt' }}>
+                                {row.time}
+                              </td>
+                              <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                                {row.cart_name}
+                              </td>
+                              <td className="border border-slate-300 px-2 py-1 text-slate-800" style={{ fontSize: '8.5pt' }}>
+                                {row.names.filter(Boolean).join(', ') || '—'}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
