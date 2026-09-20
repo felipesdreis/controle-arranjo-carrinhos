@@ -249,7 +249,7 @@ export default function Report() {
     try {
       const [slotsData, assignmentsData] = await Promise.all([
         getSlotsWithDetails(),
-        w ? getAssignmentsByWeek(w.id) : Promise.resolve([]),
+        getAssignmentsByWeek(w.id),
       ])
       setSlots(slotsData)
       setAssignments(assignmentsData)
@@ -265,7 +265,12 @@ export default function Report() {
   useEffect(() => {
     const existing = scheduleWeeks.find((w) => w.week_start === weekStart) ?? null
     setWeek(existing)
-    loadData(existing)
+    if (existing) {
+      loadData(existing)
+    } else {
+      setSlots([])
+      setAssignments([])
+    }
   }, [scheduleWeeks, weekStart, loadData])
 
   const grid = useMemo(
