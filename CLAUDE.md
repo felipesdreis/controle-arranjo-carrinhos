@@ -92,3 +92,12 @@ Deleção de usuário em `auth.users` apaga **todos os dados** cadastrados por e
 
 - `html2pdf.js` — geração de PDF a partir do DOM (tem vulns transitivas inofensivas, não atualizar)
 - `date-fns` — manipulação de datas (sem locale pt-BR nos imports — usar strings formatadas manualmente)
+
+## graphify
+
+Este projeto tem um grafo de conhecimento em `graphify-out/` com god nodes, estrutura de comunidades e relações entre arquivos.
+
+- Para perguntas sobre o código, rode primeiro `graphify query "<pergunta>"` quando `graphify-out/graph.json` existir. Use `graphify path "<A>" "<B>"` para relações entre dois pontos e `graphify explain "<conceito>"` para conceitos específicos. Isso retorna um subgrafo focado, geralmente bem menor que `GRAPH_REPORT.md` ou uma busca bruta com grep.
+- Se `graphify-out/wiki/index.md` existir, use-o para navegação ampla em vez de explorar os arquivos-fonte diretamente.
+- Leia `graphify-out/GRAPH_REPORT.md` só para revisão ampla de arquitetura ou quando query/path/explain não trouxerem contexto suficiente.
+- Depois de alterar código, rode `graphify update .` para manter o grafo atualizado (só AST, sem custo de API).
