@@ -8,6 +8,7 @@ import {
   FileText,
   Settings,
   Shield,
+  Filter,
 } from 'lucide-react'
 import { useRoleCheck } from '../../hooks/useRoleCheck'
 
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { to: '/carts', label: 'Carrinhos', Icon: ShoppingCart },
   { to: '/locations', label: 'Locais', Icon: MapPin },
   { to: '/schedule', label: 'Programação', Icon: Calendar },
+  { to: '/availability', label: 'Disponibilidade', Icon: Filter },
   { to: '/report', label: 'Relatório', Icon: FileText },
 ]
 

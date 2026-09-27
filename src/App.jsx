@@ -15,6 +15,7 @@ import Carts from './pages/Carts'
 import Locations from './pages/Locations'
 import Schedule from './pages/Schedule'
 import Report from './pages/Report'
+import Availability from './pages/Availability'
 import Settings from './pages/Settings'
 import AdminUsersPage from './pages/Admin/Users'
 
@@ -52,6 +53,7 @@ function AppLayout() {
             <Route path="/carts" element={<RoleRoute><Carts /></RoleRoute>} />
             <Route path="/locations" element={<RoleRoute><Locations /></RoleRoute>} />
             <Route path="/schedule" element={<RoleRoute><Schedule /></RoleRoute>} />
+            <Route path="/availability" element={<RoleRoute><Availability /></RoleRoute>} />
             <Route path="/report" element={<Report />} />
             <Route path="/settings" element={<RoleRoute><Settings /></RoleRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
