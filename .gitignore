@@ -31,3 +31,8 @@ supabase/.env
 
 # Vercel CLI
 .vercel/
+
+docs/
+
+# Graphify
+graphify-out/
