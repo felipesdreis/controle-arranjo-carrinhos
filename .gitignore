@@ -36,3 +36,5 @@ docs/
 
 # Graphify
 graphify-out/
+
+.claude-flow/policy/state.json
