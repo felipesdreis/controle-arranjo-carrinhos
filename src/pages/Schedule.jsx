@@ -336,9 +336,29 @@ export default function Schedule() {
                 </select>
               )
             })}
-            <div className="text-xs text-ink/40 mt-0.5 leading-tight">
-              <span className="block truncate" title={slot.location_name}>{slot.location_name}</span>
-              <span className="font-mono">{slot.start_time}–{slot.end_time}</span>
+            <div className="flex items-start justify-between gap-1 mt-0.5">
+              <div className="text-xs text-ink/40 leading-tight min-w-0">
+                <span className="block truncate" title={slot.location_name}>{slot.location_name}</span>
+                <span className="font-mono">{slot.start_time}–{slot.end_time}</span>
+              </div>
+              <div className="flex items-center shrink-0">
+                <button
+                  onClick={() => { setShowSlotManager(true); openEditSlot(slot) }}
+                  title="Editar turno"
+                  aria-label="Editar turno"
+                  className="p-1 rounded text-ink/40 hover:text-ink/70 hover:bg-surface-subtle transition-colors"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={() => handleDeleteSlot(slot)}
+                  title="Excluir turno"
+                  aria-label="Excluir turno"
+                  className="p-1 rounded text-ink/40 hover:text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -482,7 +502,7 @@ export default function Schedule() {
 
                     {/* Desktop: grade completa da semana */}
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full min-w-[640px] text-sm border-collapse">
+                      <table className="w-full min-w-[640px] table-fixed text-sm border-collapse">
                         <thead>
                           <tr className="bg-surface-subtle border-b border-surface-border">
                             <th className="text-left px-4 py-3 font-medium text-ink/70 w-24 shrink-0">
