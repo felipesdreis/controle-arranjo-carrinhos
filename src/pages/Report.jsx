@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'react'
-import { ChevronLeft, ChevronRight, Download, Printer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, ImageDown, Printer } from 'lucide-react'
 import { format, addWeeks, subWeeks, addDays } from 'date-fns'
 import useAppStore from '../store/useAppStore'
 import { getSlotsWithDetails } from '../api/slots'
@@ -310,24 +310,37 @@ export default function Report() {
     }
   }
 
-  async function handleExportImage() {
-    if (!cardRef.current) return
+  async function exportPNG(el, filename, scale) {
+    if (!el) return
     setExporting(true)
     try {
       const html2pdf = (await import('html2pdf.js')).default
       const worker = html2pdf()
-        .set({ html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: EXPORT_VIEWPORT_WIDTH } })
-        .from(cardRef.current)
+        .set({ html2canvas: { scale, useCORS: true, backgroundColor: '#ffffff', windowWidth: EXPORT_VIEWPORT_WIDTH } })
+        .from(el)
         .toCanvas()
       await worker
-      const canvas = worker.prop.canvas
+      // toBlob em vez de toDataURL: em scale alto a string base64 fica enorme
+      const blob = await new Promise((resolve) => worker.prop.canvas.toBlob(resolve, 'image/png'))
+      const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.download = `arranjo_${selectedBrotherName || 'irmao'}_${weekStart}.png`
-      link.href = canvas.toDataURL('image/png')
+      link.download = filename
+      link.href = url
       link.click()
+      URL.revokeObjectURL(url)
     } finally {
       setExporting(false)
     }
+  }
+
+  function handleExportImage() {
+    return exportPNG(cardRef.current, `arranjo_${selectedBrotherName || 'irmao'}_${weekStart}.png`, 2)
+  }
+
+  // ponytail: scale 4 ≈ 5000px de largura na folha; subir só se precisar imprimir em painel grande
+  function handleExportReportPNG() {
+    const prefix = mode === 'location' ? 'locais' : mode === 'brother' ? 'irmao' : 'testemunho'
+    return exportPNG(reportRef.current, `${prefix}_${weekStart}.png`, 4)
   }
 
   function handlePrint() {
@@ -364,6 +377,16 @@ export default function Report() {
             <Printer size={14} />
             Imprimir
           </button>
+          {!isBrotherCards && (
+            <button
+              onClick={handleExportReportPNG}
+              disabled={!week || exporting}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 text-slate-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ImageDown size={14} />
+              Exportar PNG
+            </button>
+          )}
           <button
             onClick={mode === 'brother' && brotherLayout === 'cards' ? handleExportImage : handleExportPDF}
             disabled={!week || exporting}
